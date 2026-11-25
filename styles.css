@@ -63,8 +63,8 @@ html[data-arabic-rtl="1"] [class*="subtext_yc3axZ"],
 html[data-arabic-rtl="1"] [class*="activityStatusText_zln_tS"],
 html[data-arabic-rtl="1"] [class*="subtext_zln_tS"],
 html[data-arabic-rtl="1"] [class*="gameName_UQqFnR"],
-html[data-arabic-rtl="1"] [class*="membersGroupName_86es0b"],
-html[data-arabic-rtl="1"] [class*="clipTitle_rE8-46"] {
+html[data-arabic-rtl="1"] [class*="membersGroupName_"],
+html[data-arabic-rtl="1"] [class*="clipTitle_"] {
     text-align: right !important;
     unicode-bidi: plaintext !important;
 }
@@ -266,7 +266,7 @@ html[data-arabic-rtl="1"] [class*="content_2dzrtJ"] [class*="body_"] {
 /* عكس مؤشر القنوات والسيرفرات غير المقروءة (النقطة/الشريط على الحافة اليمنى) */
 html[data-arabic-rtl="1"] [class*="guilds_"],
 html[data-arabic-rtl="1"] [data-list-id="guildsnav"],
-html[data-arabic-rtl="1"] [class*="listItem_rwEpIL"] {
+html[data-arabic-rtl="1"] [data-list-id="guildsnav"] [class*="listItem_"] {
     direction: rtl !important;
 }
 
@@ -384,8 +384,8 @@ html[data-arabic-rtl="1"] [class*="hasUnreadDot_IqWmhA"]::before {
 }
 
 /* عكس قناع أيقونات المتصلين بالصوت، وشارة إشعارات الشريط العلوي وتدرجه، وتدرجات الخلفيات الثانوية في RTL */
-html[data-arabic-rtl="1"] [class*="avatarContainerMasked_m-EqeQ"],
-html[data-arabic-rtl="1"] [class*="avatarContainerMasked_m-EqeQ"] foreignObject > * {
+html[data-arabic-rtl="1"] [class*="avatarContainerMasked_"],
+html[data-arabic-rtl="1"] [class*="avatarContainerMasked_"] foreignObject > * {
     transform: scaleX(-1);
 }
 
@@ -481,7 +481,7 @@ html[data-arabic-rtl="1"] [class*="leftPanel_FmNv9Q"] {
     ) !important;
 }
 
-html[data-arabic-rtl="1"] [class*="voiceChannelHighlightGlow_Wx6SnQ"] {
+html[data-arabic-rtl="1"] [class*="voiceChannelHighlightGlow_"] {
     background: radial-gradient(
         ellipse 40px 50% at right center,
         rgba(0, 158, 66, 0.125) 0,
@@ -502,11 +502,11 @@ html[data-arabic-rtl="1"] [class*="item_lm2_KW"] {
     ) !important;
 }
 
-html[data-arabic-rtl="1"] [class*="roleStyleMessageContainer_cXmH6r"]::after {
+html[data-arabic-rtl="1"] [class*="roleStyleMessageContainer_"]::after {
     background: linear-gradient(to left, transparent, var(--background-base-lowest)) !important;
 }
 
-html[data-arabic-rtl="1"] [class*="searchFloating_AV6l5m"] {
+html[data-arabic-rtl="1"] [class*="searchFloating_"] {
     background: linear-gradient(
         to left,
         transparent 0,
@@ -515,7 +515,7 @@ html[data-arabic-rtl="1"] [class*="searchFloating_AV6l5m"] {
     ) !important;
 }
 
-html[data-arabic-rtl="1"] [class*="guildOfficialMessage_Vwa3As"] {
+html[data-arabic-rtl="1"] [class*="guildOfficialMessage_"] {
     background-image: linear-gradient(
         to left,
         color-mix(
@@ -533,11 +533,11 @@ html[data-arabic-rtl="1"] [class*="emojiRow_XTvD56"] [class*="emojiImage_XTvD56"
 }
 
 /* عكس الحواف الدائرية الجانبية غير المتناظرة (Split Pills / Panels / Date Range) في RTL */
-html[data-arabic-rtl="1"] [class*="topicsCaretLeft_j9Vvzj"] {
+html[data-arabic-rtl="1"] [class*="topicsCaretLeft_"] {
     border-radius: 0 20px 20px 0 !important;
 }
 
-html[data-arabic-rtl="1"] [class*="topicsCaretRight_j9Vvzj"] {
+html[data-arabic-rtl="1"] [class*="topicsCaretRight_"] {
     border-radius: 20px 0 0 20px !important;
 }
 
@@ -567,13 +567,11 @@ html[data-arabic-rtl="1"] [class*="answerPill_lm2_KW"] {
     border-radius: var(--radius-xs) 0 0 var(--radius-xs) !important;
 }
 
-html[data-arabic-rtl="1"] [class*="editingPanelExpanded_s3DB6Y"] [class*="editingPanel_s3DB6Y"] {
+html[data-arabic-rtl="1"] [class*="editingPanelExpanded_"] [class*="editingPanel_"] {
     border-radius: 0 var(--radius-lg) var(--radius-lg) 0 !important;
 }
 
-html[data-arabic-rtl="1"]
-    [class*="editingPanelExpanded_s3DB6Y"]
-    [class*="profileContentOuter_s3DB6Y"] {
+html[data-arabic-rtl="1"] [class*="editingPanelExpanded_"] [class*="profileContentOuter_"] {
     border-radius: var(--radius-lg) 0 0 var(--radius-lg) !important;
 }
 
@@ -607,24 +605,24 @@ html[data-arabic-rtl="1"] [class*="inviteSplash_4hnqn0"] {
     border-radius: 5px 0 0 5px !important;
 }
 
-html[data-arabic-rtl="1"] [class*="newlyAddedHighlight_6OcK5D"] {
+html[data-arabic-rtl="1"] [class*="newlyAddedHighlight_"] {
     border-radius: 4px 4px 0 4px !important;
 }
 
-html[data-arabic-rtl="1"] [class*="editPanel_AH5XKr"] {
+html[data-arabic-rtl="1"] [class*="editPanel_"] {
     left: auto !important;
     right: 0 !important;
 }
 
-html[data-arabic-rtl="1"] [class*="editPanel_AH5XKr"]:not([class*="active_AH5XKr"]) {
+html[data-arabic-rtl="1"] [class*="editPanel_"]:not([class*="active_"]) {
     transform: translateX(calc(var(--custom-gallery-panel-width) * -1)) !important;
 }
 
-html[data-arabic-rtl="1"] [class*="galleryPanel_AH5XKr"]:not([class*="active_AH5XKr"]) {
+html[data-arabic-rtl="1"] [class*="galleryPanel_"]:not([class*="active_"]) {
     transform: translateX(var(--custom-gallery-panel-width)) !important;
 }
 
-html[data-arabic-rtl="1"] div[class*="profileThemedContainer_MLLsfk"] {
+html[data-arabic-rtl="1"] div[class*="profileThemedContainer_"] {
     border-radius: 0 8px 8px 0 !important;
 }
 
@@ -636,18 +634,18 @@ html[data-arabic-rtl="1"] [class*="noticeArrow_6XH7h0"] {
     transform: translateX(4px) rotate(45deg) !important;
 }
 
-html[data-arabic-rtl="1"] [class*="viewAllGamesButton_8iSxT3"]:hover [class*="viewAllIcon_8iSxT3"],
-html[data-arabic-rtl="1"] [class*="viewAllGames_8iSxT3"]:hover [class*="viewAllIcon_8iSxT3"],
-html[data-arabic-rtl="1"] [class*="viewAllNitroGames_8iSxT3"]:hover [class*="viewAllIcon_8iSxT3"] {
+html[data-arabic-rtl="1"] [class*="viewAllGamesButton_"]:hover [class*="viewAllIcon_"],
+html[data-arabic-rtl="1"] [class*="viewAllGames_"]:hover [class*="viewAllIcon_"],
+html[data-arabic-rtl="1"] [class*="viewAllNitroGames_"]:hover [class*="viewAllIcon_"] {
     transform: rotate(90deg) translateY(3px) !important;
 }
 
-html[data-arabic-rtl="1"] [class*="editingPanelExpandButtonDefault_s3DB6Y"] {
+html[data-arabic-rtl="1"] [class*="editingPanelExpandButtonDefault_"] {
     transform: translateX(-12px) !important;
 }
 
-html[data-arabic-rtl="1"] [class*="editingPanelExpandButtonDefault_s3DB6Y"]:focus-visible,
-html[data-arabic-rtl="1"] [class*="editingPanelExpandButtonDefault_s3DB6Y"]:hover {
+html[data-arabic-rtl="1"] [class*="editingPanelExpandButtonDefault_"]:focus-visible,
+html[data-arabic-rtl="1"] [class*="editingPanelExpandButtonDefault_"]:hover {
     transform: translateX(0) !important;
 }
 
@@ -730,12 +728,12 @@ html[data-arabic-rtl="1"] [class*="rarity_1lwQ1X"] {
 }
 
 /* عكس محاذاة الصور واللافتات الاتجاهية (object-position) في RTL */
-html[data-arabic-rtl="1"] [class*="questHomeHeroBackgroundImage_hjotnx"] {
+html[data-arabic-rtl="1"] [class*="questHomeHeroBackgroundImage_"] {
     object-position: left !important;
 }
 
 html[data-arabic-rtl="1"] [class*="heroImage_Ls3EVK"],
-html[data-arabic-rtl="1"] [class*="overlayWidgetImage_KOkKTK"] {
+html[data-arabic-rtl="1"] [class*="overlayWidgetImage_"] {
     object-position: top left !important;
 }
 
@@ -1550,6 +1548,7 @@ html[data-arabic-rtl="1"] [class*="premiumUnlockAnimation_"],
 html[data-arabic-rtl="1"] [class*="premiumUnlockedWithNitroPillContainer_"],
 html[data-arabic-rtl="1"] [class*="nitroWumpusMobile_"],
 html[data-arabic-rtl="1"] [class*="overlayLabel_1399Om"],
+html[data-arabic-rtl="1"] [class*="ring_6i1vAy"],
 html[data-arabic-rtl="1"] [class*="staticWumpusWithTrinkets_"],
 html[data-arabic-rtl="1"] [class*="wowAnimation_t2lcaR"],
 html[data-arabic-rtl="1"] [class*="obscureWarning_"],
@@ -1581,25 +1580,25 @@ html[data-arabic-rtl="1"] [class*="addIcon_Q8-jZj"],
 html[data-arabic-rtl="1"] [class*="rewardTooltip_"],
 html[data-arabic-rtl="1"] [class*="spinner_vYDVPJ"],
 html[data-arabic-rtl="1"] [class*="pill_KUkQ06"],
-html[data-arabic-rtl="1"] [class*="saveNoticeContainer_UyQMSC"],
+html[data-arabic-rtl="1"] [class*="saveNoticeContainer_"],
 html[data-arabic-rtl="1"] [class*="mediaPlayer_RHUSWe"],
 html[data-arabic-rtl="1"] [class*="responsive_"][class*="bannerAsset_"],
 html[data-arabic-rtl="1"] [class*="editButton_2IR9L0"],
 html[data-arabic-rtl="1"] [class*="emptyState_fzU3RU"],
-html[data-arabic-rtl="1"] [class*="lockIconOverlay_ZJqSZM"],
+html[data-arabic-rtl="1"] [class*="lockIconOverlay_"],
 html[data-arabic-rtl="1"] [class*="rewardContainerUnenrolled_"] > [class*="questRewardTile_"],
 html[data-arabic-rtl="1"] [class*="disabled_Ykwe0q"],
-html[data-arabic-rtl="1"] [class*="featureAssetLabel_RCbKta"],
-html[data-arabic-rtl="1"] [class*="recommendedTierHighlightTag_twYJsJ"],
+html[data-arabic-rtl="1"] [class*="featureAssetLabel_"],
+html[data-arabic-rtl="1"] [class*="recommendedTierHighlightTag_"],
 html[data-arabic-rtl="1"] [class*="centerOrb_NUIl5Z"],
-html[data-arabic-rtl="1"] [class*="popoutRoot_KWWX2H"][class*="arrowAlignmentMiddle_"]::before,
-html[data-arabic-rtl="1"] [class*="popoutRoot_KWWX2H"][class*="arrowAlignmentTop_"]::before {
+html[data-arabic-rtl="1"] [class*="popoutRoot_"][class*="arrowAlignmentMiddle_"]::before,
+html[data-arabic-rtl="1"] [class*="popoutRoot_"][class*="arrowAlignmentTop_"]::before {
     inset-inline-start: auto !important;
     left: 50% !important;
     right: auto !important;
 }
 
-html[data-arabic-rtl="1"] [class*="newPostsButton_BkGrJJ"] {
+html[data-arabic-rtl="1"] [class*="newPostsButton_"] {
     inset-inline-end: auto !important;
     right: 50% !important;
     left: auto !important;
@@ -1667,25 +1666,11 @@ html[data-arabic-rtl="1"] [class*="list_XFAI1O"] {
     margin-inline-start: var(--space-20) !important;
 }
 
-html[data-arabic-rtl="1"] [class*="listBoxSectionHeader_b5PEJH"] {
+html[data-arabic-rtl="1"] [class*="listBoxSectionHeader_"] {
     padding-inline: var(--space-8) var(--space-4) !important;
 }
 
-/* إصلاح التمركز الأفقي للعناصر التي تعتمد inset-inline-start: 50% مع translateX(-50%) */
-html[data-arabic-rtl="1"] [class*="nitroTopDividerLockCircle_KU0wA7"],
-html[data-arabic-rtl="1"] [class*="premiumUnlockAnimation_KU0wA7"],
-html[data-arabic-rtl="1"] [class*="premiumUnlockedWithNitroPillContainer_KU0wA7"],
-html[data-arabic-rtl="1"] [class*="nitroWumpusMobile_rCfKFu"],
-html[data-arabic-rtl="1"] [class*="overlayLabel_1399Om"],
-html[data-arabic-rtl="1"] [class*="ring_6i1vAy"],
-html[data-arabic-rtl="1"] [class*="orbWalletBlackFridayGlow_OqyRup"],
-html[data-arabic-rtl="1"] [class*="popoutRoot_KWWX2H"][class*="arrowAlignmentMiddle_KWWX2H"]:before,
-html[data-arabic-rtl="1"] [class*="popoutRoot_KWWX2H"][class*="arrowAlignmentTop_KWWX2H"]:before {
-    inset-inline-start: auto !important;
-    left: 50% !important;
-}
-
-html[data-arabic-rtl="1"] [class*="transcriptContPortrait_hFq1lM"] {
+html[data-arabic-rtl="1"] [class*="transcriptContPortrait_"] {
     inset-inline: auto !important;
     right: auto !important;
     left: 50% !important;
@@ -1697,20 +1682,18 @@ html[data-arabic-rtl="1"] [class*="top_6zZYhF"] [class*="item_6zZYhF"] + [class*
     margin-inline-start: var(--space-xl) !important;
 }
 
-html[data-arabic-rtl="1"] [class*="tag_6v0VwV"]:has([slot="remove"]) {
+html[data-arabic-rtl="1"] [class*="tag_"]:has([slot="remove"]) {
     padding-inline: var(--space-12) var(--space-8) !important;
 }
 
+html[data-arabic-rtl="1"] [class*="tagGroup_"][data-size="sm"] [class*="tag_"]:has([slot="remove"]),
 html[data-arabic-rtl="1"]
-    [class*="tagGroup_6v0VwV"][data-size="sm"]
-    [class*="tag_6v0VwV"]:has([slot="remove"]),
-html[data-arabic-rtl="1"]
-    [class*="tagGroup_6v0VwV"][data-size="xs"]
-    [class*="tag_6v0VwV"]:has([slot="remove"]) {
+    [class*="tagGroup_"][data-size="xs"]
+    [class*="tag_"]:has([slot="remove"]) {
     padding-inline: var(--space-8) var(--space-4) !important;
 }
 
-html[data-arabic-rtl="1"] [class*="imageOffsetPositioner_BQi7pE"] {
+html[data-arabic-rtl="1"] [class*="imageOffsetPositioner_"] {
     border-top-right-radius: 0 !important;
     border-top-left-radius: var(
         --custom-application-widget-card-radius,

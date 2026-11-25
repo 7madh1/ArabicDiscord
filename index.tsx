@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import * as DataStore from "@api/DataStore";
 import { definePluginSettings } from "@api/Settings";
 import { disableStyle, enableStyle } from "@api/Styles";
 import { Button } from "@components/Button";
@@ -15,20 +16,32 @@ import definePlugin, { OptionType, StartAt } from "@utils/types";
 import { find, waitFor } from "@webpack";
 import { FluxDispatcher, i18n, LocaleStore, Menu, moment, React, showToast } from "@webpack/common";
 
-import translations from "./ar.json";
-import complexTranslations from "./complex_ar.json";
 import managedStyle from "./styles.css?managed";
 
 const logger = new Logger("ArabicDiscord");
 
+const REMOTE_REPO_BASE = "https://raw.githubusercontent.com/7madh1/ArabicDiscord/main";
+const REMOTE_AR_URL = `${REMOTE_REPO_BASE}/ar.json`;
+const REMOTE_COMPLEX_URL = `${REMOTE_REPO_BASE}/complex_ar.json`;
+const DS_AR_KEY = "ArabicDiscord_ar_v1";
+const DS_COMPLEX_KEY = "ArabicDiscord_complex_v1";
+const DS_META_KEY = "ArabicDiscord_meta_v1";
+const UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
 type TranslationDict = {
-    byKey: Record<string, string>;
-    byText: Record<string, string>;
+    byKey?: Record<string, string>;
+    byText?: Record<string, string>;
 };
 
-const complexArMap = new Map<string, unknown[]>(
-    Object.entries(complexTranslations as unknown as Record<string, unknown[]>),
-);
+interface TranslationMeta {
+    updatedAt: number;
+    arCount: number;
+    complexCount: number;
+}
+
+let activeDict: TranslationDict = {};
+let complexArMap = new Map<string, unknown[]>();
+let isCheckingRemoteUpdates = false;
 const seenUntranslated = new Set<string>();
 const HAS_LATIN_RE = /[A-Za-z]/;
 const HAS_DIGIT_RE = /\d/;
@@ -135,8 +148,8 @@ const ARABIC_FONTS: readonly ArabicFontDef[] = [
 const ARABIC_FONT_MAP = new Map<string, ArabicFontDef>(ARABIC_FONTS.map(f => [f.id, f]));
 const DEFAULT_ARABIC_FONT = ARABIC_FONTS[0];
 const lookupCache = new Map<string, string | null>();
-const translatedNodeValues = new WeakMap<Node, string>();
-const translatedPlaceholders = new WeakMap<Element, string>();
+let translatedNodeValues = new WeakMap<Node, string>();
+let translatedPlaceholders = new WeakMap<Element, string>();
 let cachedLookups: LookupMaps | null = null;
 let stopDomFallbackFn: (() => void) | null = null;
 
@@ -175,7 +188,7 @@ function exportUntranslatedToFile() {
 }
 
 function ActionsPanel() {
-    const simpleCount = Object.keys((translations as TranslationDict).byText ?? {}).length;
+    const simpleCount = Object.keys(activeDict.byText ?? {}).length;
     const complexCount = complexArMap.size;
     const [capturedCount, setCapturedCount] = React.useState(seenUntranslated.size);
 
@@ -656,7 +669,7 @@ interface LookupMaps {
 }
 
 const patchedTargets: PatchedIntlTarget[] = [];
-const byAccessor = new WeakMap<object, string>();
+let byAccessor = new WeakMap<object, string>();
 let active = false;
 let domObserver: MutationObserver | null = null;
 
@@ -676,7 +689,7 @@ function resolveKeyToHash(key: string): string {
 function getStaticLookups(): LookupMaps {
     if (cachedLookups) return cachedLookups;
 
-    const { byText } = translations as TranslationDict;
+    const { byText } = activeDict;
     const byTextMap = new Map<string, string>();
 
     for (const [enText, arText] of Object.entries(byText ?? {})) {
@@ -703,7 +716,7 @@ function getNormLookupMap(lookups: LookupMaps): Map<string, string> {
 }
 
 function populateKeyAccessors() {
-    const { byKey } = translations as TranslationDict;
+    const { byKey } = activeDict;
     if (!byKey || !i18n?.t) return;
 
     for (const [rawKey, arText] of Object.entries(byKey)) {
@@ -1016,7 +1029,7 @@ function translateOutput(out: unknown, lookups: LookupMaps): unknown {
     return out;
 }
 
-function patchIntlObject(target: Record<string, IntlMethod>, lookups: LookupMaps) {
+function patchIntlObject(target: Record<string, IntlMethod>) {
     if (!target || patchedTargets.some(p => p.target === target)) return;
 
     const originals: PatchedIntlTarget["originals"] = {};
@@ -1040,7 +1053,7 @@ function patchIntlObject(target: Record<string, IntlMethod>, lookups: LookupMaps
             }
 
             const out = orig.apply(this, args);
-            return active ? translateOutput(out, lookups) : out;
+            return active ? translateOutput(out, cachedLookups ?? buildTranslationLookups()) : out;
         };
     }
 
@@ -1080,11 +1093,11 @@ const PLACEHOLDER_SELECTOR = "[class*='placeholder_'],.public-DraftEditorPlaceho
 const AUTO_DIR_SELECTOR = [
     "[class*='truncated_HigqCD']",
     "[class*='subtext_yc3axZ']",
-    "[class*='activityStatusText_zln_tS']",
+    "[class*='activityStatusText_']",
     "[class*='subtext_zln_tS']",
     "[class*='gameName_UQqFnR']",
-    "[class*='membersGroupName_86es0b']",
-    "[class*='clipTitle_rE8-46']",
+    "[class*='membersGroupName_']",
+    "[class*='clipTitle_']",
 ].join(",");
 
 function markAutoDirElement(el: Element) {
@@ -1241,10 +1254,10 @@ function translateDomNode(node: Node, lookups: LookupMaps) {
     }
 }
 
-function startDomFallback(lookups: LookupMaps) {
+function startDomFallback() {
     if (domObserver || !document.body) return;
 
-    translateDomNode(document.body, lookups);
+    translateDomNode(document.body, cachedLookups ?? buildTranslationLookups());
 
     const pendingNodes = new Set<Node>();
     let rafId: number | null = null;
@@ -1273,7 +1286,7 @@ function startDomFallback(lookups: LookupMaps) {
         }
         for (const node of pendingNodes) {
             if (node.isConnected) {
-                translateDomNode(node, lookups);
+                translateDomNode(node, cachedLookups ?? buildTranslationLookups());
             }
         }
         pendingNodes.clear();
@@ -1336,9 +1349,112 @@ interface PatchedLoader {
 }
 
 let patchedLoader: PatchedLoader | null = null;
-const clonedIntlMessages = new WeakMap<object, object>();
+let clonedIntlMessages = new WeakMap<object, object>();
 
-function patchLoaderPrototype(proto: Record<string, any> | null | undefined, lookups: LookupMaps) {
+function applyLoadedDictionaries(
+    arDict: TranslationDict,
+    complexDict: Record<string, unknown[]>,
+    triggerRerender = true,
+) {
+    activeDict = arDict;
+    complexArMap = new Map(Object.entries(complexDict));
+    cachedLookups = null;
+    lookupCache.clear();
+    clonedIntlMessages = new WeakMap();
+    translatedNodeValues = new WeakMap();
+    translatedPlaceholders = new WeakMap();
+    byAccessor = new WeakMap();
+
+    if (!active) return;
+    const lookups = buildTranslationLookups();
+    if (triggerRerender) {
+        if (document.body) {
+            translateDomNode(document.body, lookups);
+        }
+        applyArabicDateSystem(true);
+    }
+}
+
+async function refreshRemoteTranslations(manual: boolean): Promise<boolean> {
+    if (isCheckingRemoteUpdates) return false;
+    isCheckingRemoteUpdates = true;
+    try {
+        const [arRes, complexRes] = await Promise.all([
+            fetch(REMOTE_AR_URL, { cache: "no-cache" }),
+            fetch(REMOTE_COMPLEX_URL, { cache: "no-cache" }),
+        ]);
+        if (!arRes.ok || !complexRes.ok) {
+            throw new Error(`HTTP ${arRes.status}/${complexRes.status}`);
+        }
+        const [arJson, complexJson] = (await Promise.all([
+            arRes.json(),
+            complexRes.json(),
+        ])) as [TranslationDict, Record<string, unknown[]>];
+
+        if (!arJson?.byText || typeof arJson.byText !== "object" || !complexJson || typeof complexJson !== "object") {
+            throw new Error("Invalid translation payload");
+        }
+
+        const arCount = Object.keys(arJson.byText).length;
+        const complexCount = Object.keys(complexJson).length;
+        if (arCount < 100 || complexCount < 100) {
+            throw new Error("Incomplete translation payload");
+        }
+
+        const meta: TranslationMeta = { updatedAt: Date.now(), arCount, complexCount };
+        await DataStore.setMany([
+            [DS_AR_KEY, arJson],
+            [DS_COMPLEX_KEY, complexJson],
+            [DS_META_KEY, meta],
+        ]);
+        applyLoadedDictionaries(arJson, complexJson, true);
+        logger.info(`Loaded remote Arabic dictionaries (${arCount} simple, ${complexCount} complex).`);
+
+        if (manual) {
+            showToast({
+                text: `تم تحديث القاموس (${arCount.toLocaleString("en-US")} نص)`,
+                variant: "success",
+            });
+        }
+        return true;
+    } catch (err) {
+        logger.warn("Failed to fetch remote Arabic translations:", err);
+        if (manual) {
+            showToast({
+                text: "تعذّر تحديث الترجمات من GitHub",
+                variant: "critical",
+            });
+        }
+        return false;
+    } finally {
+        isCheckingRemoteUpdates = false;
+    }
+}
+
+async function initDictionaries() {
+    try {
+        const [cachedAr, cachedComplex, meta] = (await DataStore.getMany([
+            DS_AR_KEY,
+            DS_COMPLEX_KEY,
+            DS_META_KEY,
+        ])) as [TranslationDict | undefined, Record<string, unknown[]> | undefined, TranslationMeta | undefined];
+
+        if (cachedAr?.byText && cachedComplex && Object.keys(cachedAr.byText).length > 100) {
+            applyLoadedDictionaries(cachedAr, cachedComplex, true);
+            const isStale = !meta?.updatedAt || Date.now() - meta.updatedAt >= UPDATE_INTERVAL_MS;
+            if (isStale) {
+                void refreshRemoteTranslations(false);
+            }
+            return;
+        }
+    } catch (err) {
+        logger.warn("Failed to read cached Arabic dictionaries from DataStore:", err);
+    }
+
+    await refreshRemoteTranslations(false);
+}
+
+function patchLoaderPrototype(proto: Record<string, any> | null | undefined) {
     if (patchedLoader || !proto || typeof proto.get !== "function") return;
 
     const origGet = proto.get;
@@ -1365,7 +1481,7 @@ function patchLoaderPrototype(proto: Record<string, any> | null | undefined, loo
             origMsg.ast.length === 1 &&
             typeof origMsg.ast[0] === "string"
         ) {
-            const hit = lookupString(origMsg.ast[0], lookups);
+            const hit = lookupString(origMsg.ast[0], cachedLookups ?? buildTranslationLookups());
             if (hit) {
                 const clone = Object.create(Object.getPrototypeOf(origMsg));
                 clone.locale = ARABIC_DATE_LOCALE;
@@ -1379,12 +1495,12 @@ function patchLoaderPrototype(proto: Record<string, any> | null | undefined, loo
     };
 }
 
-function patchMessageLoader(lookups: LookupMaps) {
+function patchMessageLoader() {
     if (patchedLoader) return;
     try {
         const loader = (i18n?.t as any)?.$$loader;
         if (!loader) return;
-        patchLoaderPrototype(Object.getPrototypeOf(loader) as Record<string, any> | null, lookups);
+        patchLoaderPrototype(Object.getPrototypeOf(loader) as Record<string, any> | null);
     } catch {
         // Ignore if $$loader isn't initialized yet
     }
@@ -1411,6 +1527,13 @@ export default definePlugin({
                         applyStylesFromSettings();
                     }}
                 />
+                <Menu.MenuItem
+                    id="arabic-discord-update-translations"
+                    label="Update Arabic Translations"
+                    action={() => {
+                        void refreshRemoteTranslations(true);
+                    }}
+                />
                 {IS_DEV && (
                     <Menu.MenuItem
                         id="arabic-discord-export"
@@ -1432,13 +1555,13 @@ export default definePlugin({
         active = true;
         enableStyle(managedStyle);
 
-        const lookups = buildTranslationLookups();
+        void initDictionaries();
 
         const initDom = () => {
             if (!active) return;
             applyStylesFromSettings();
             startRootAttrGuard();
-            startDomFallback(lookups);
+            startDomFallback();
             applyArabicDateSystem();
         };
 
@@ -1488,23 +1611,22 @@ export default definePlugin({
 
         waitFor("MessageLoader", (mod: { MessageLoader?: { prototype?: Record<string, any> } }) => {
             if (!active) return;
-            patchLoaderPrototype(mod?.MessageLoader?.prototype, cachedLookups ?? lookups);
+            patchLoaderPrototype(mod?.MessageLoader?.prototype);
         });
 
         waitFor(
             m => m != null && Object.getPrototypeOf(m)?.withFormatters != null,
             (intlObj: Record<string, IntlMethod>) => {
                 if (!active) return;
-                const syncedLookups = buildTranslationLookups();
-                patchIntlObject(intlObj, syncedLookups);
+                patchIntlObject(intlObj);
                 const proto = Object.getPrototypeOf(intlObj) as Record<string, IntlMethod> | null;
-                if (proto) patchIntlObject(proto, syncedLookups);
-                patchMessageLoader(syncedLookups);
+                if (proto) patchIntlObject(proto);
+                patchMessageLoader();
 
                 queueMicrotask(() => {
                     if (!active) return;
-                    const latest = buildTranslationLookups();
-                    patchMessageLoader(latest);
+                    populateKeyAccessors();
+                    patchMessageLoader();
                     applyArabicDateSystem();
                 });
                 logger.info("تم تفعيل تعريب ديسكورد بنجاح!");
@@ -1514,7 +1636,14 @@ export default definePlugin({
 
     stop() {
         active = false;
+        activeDict = {};
+        complexArMap.clear();
+        cachedLookups = null;
         lookupCache.clear();
+        clonedIntlMessages = new WeakMap();
+        translatedNodeValues = new WeakMap();
+        translatedPlaceholders = new WeakMap();
+        byAccessor = new WeakMap();
         disableStyle(managedStyle);
 
         if (dateSyncTimeoutId !== null) {

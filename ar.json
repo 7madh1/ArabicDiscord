@@ -20363,6 +20363,7 @@
         "Full RTL Layout": "اتجاه الواجهة الكامل (RTL)",
         "Capture Untranslated Strings": "تسجيل النصوص غير المترجمة",
         "Log newly spotted English strings while browsing Discord": "رصد أي جمل إنجليزية جديدة أثناء تصفح ديسكورد لتصديرها لاحقاً",
-        "Export Untranslated Strings": "تصدير النصوص غير المترجمة"
+        "Export Untranslated Strings": "تصدير النصوص غير المترجمة",
+        "Update Arabic Translations": "تحديث الترجمات الآن"
     }
 }

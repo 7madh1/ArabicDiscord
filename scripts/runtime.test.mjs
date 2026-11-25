@@ -11,55 +11,74 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { isValidAstNode, isValidDictionaries } from "../validation.mjs";
+import { isValidAstNode, isValidDictionaries, MAX_AST_DEPTH } from "../validation.mjs";
 
 const pluginDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const arJson = JSON.parse(fs.readFileSync(path.join(pluginDir, "ar.json"), "utf8"));
 const complexJson = JSON.parse(fs.readFileSync(path.join(pluginDir, "complex_ar.json"), "utf8"));
 
-test("AST schema accepts valid node kinds 1..8 and nested branches", () => {
-    assert.equal(isValidAstNode("نص عربي"), true);
-    assert.equal(isValidAstNode([1, "username"]), true);
-    assert.equal(isValidAstNode([2, "count"]), true);
-    assert.equal(isValidAstNode([2, "count", "percent"]), true);
-    assert.equal(isValidAstNode([3, "createdAt", "short"]), true);
-    assert.equal(isValidAstNode([4, "updatedAt", "medium"]), true);
-    assert.equal(isValidAstNode([7]), true);
-    assert.equal(
-        isValidAstNode([5, "gender", { male: ["مرحباً ", [1, "name"]], other: ["أهلاً"] }]),
-        true,
-    );
-    assert.equal(
-        isValidAstNode([
-            6,
-            "members",
-            { "=-1": ["[جاري الحساب...]"], "=0": [], one: [[7], " عضو"], other: [[7], " أعضاء"] },
-            0,
-            "cardinal",
-        ]),
-        true,
-    );
-    assert.equal(isValidAstNode([8, "$b", ["نص ", [7]], ["attr"]]), true);
-});
+test("AST schema test matrix validates all node kinds 1..8, plural 'other', and nesting depth", () => {
+    const validCases = [
+        "نص عربي",
+        [1, "username"],
+        [2, "count"],
+        [2, "count", "percent"],
+        [3, "createdAt"],
+        [3, "createdAt", "short"],
+        [4, "updatedAt"],
+        [4, "updatedAt", "medium"],
+        [5, "nth", { 1: ["الأول"], 2: ["الثاني"] }],
+        [5, "gender", { male: ["مرحباً ", [1, "name"]], other: ["أهلاً"] }],
+        [6, "members", { "=-1": ["[جاري الحساب...]"], "=0": [], one: [[7], " عضو"], other: [[7], " أعضاء"] }, 0, "cardinal"],
+        [6, "rank", { one: [[7], "st"], other: [[7], "th"] }, 1, "ordinal"],
+        [7],
+        [8, "$b", ["نص ", [7]]],
+        [8, "$link", ["اضغط هنا"], ["href"]],
+    ];
+    for (const node of validCases) {
+        assert.equal(isValidAstNode(node), true, `Expected valid AST node: ${JSON.stringify(node)}`);
+    }
 
-test("AST schema rejects malformed or corrupt node shapes", () => {
-    assert.equal(isValidAstNode(null), false);
-    assert.equal(isValidAstNode(123), false);
-    assert.equal(isValidAstNode([]), false);
-    assert.equal(isValidAstNode([99, "unknown"]), false);
-    assert.equal(isValidAstNode([1]), false);
-    assert.equal(isValidAstNode([1, ""]), false);
-    assert.equal(isValidAstNode([1, "x", "extra"]), false);
-    assert.equal(isValidAstNode([7, "unexpected"]), false);
-    assert.equal(isValidAstNode([3, "dt", 42]), false);
-    assert.equal(isValidAstNode([5, "sel", null]), false);
-    assert.equal(isValidAstNode([5, "sel", {}]), false);
-    assert.equal(isValidAstNode([6, "count", { one: [[7]] }, "0", "cardinal"]), false);
-    assert.equal(isValidAstNode([6, "count", { one: [[7]] }, 0, "badType"]), false);
-    assert.equal(isValidAstNode([6, "count", { bogus: ["x"] }, 0, "cardinal"]), false);
-    assert.equal(isValidAstNode([6, "count", { one: [7, "broken"] }, 0, "cardinal"]), false);
-    assert.equal(isValidAstNode([8, "$b", "not-array"]), false);
-    assert.equal(isValidAstNode([8, "$b", ["ok"], "not-array"]), false);
+    const invalidCases = [
+        null,
+        123,
+        [],
+        [0, "zero"],
+        [99, "unknown"],
+        [1],
+        [1, ""],
+        [1, "x", "extra"],
+        [2, "count", 123],
+        [3, "dt", 42],
+        [4, "tm", null],
+        [5, "sel", null],
+        [5, "sel", {}],
+        [5, "sel", { other: "not-array" }],
+        [5, "sel", { other: ["ok"] }, "extra"],
+        [6, "count", { one: ["واحد"] }, 0, "cardinal"], // missing required `other`
+        [6, "count", { other: ["x"] }, 1.5, "cardinal"], // non-integer offset
+        [6, "count", { other: ["x"] }, "0", "cardinal"],
+        [6, "count", { one: [[7]], other: [[7]] }, 0, "badType"],
+        [6, "count", { bogus: ["x"], other: ["y"] }, 0, "cardinal"],
+        [6, "count", { one: [7, "broken"], other: ["y"] }, 0, "cardinal"],
+        [7, "unexpected"],
+        [8, "$b", "not-array"],
+        [8, "$b", ["ok"], "not-array"],
+        [8, "", ["empty-tag"]],
+    ];
+    for (const node of invalidCases) {
+        assert.equal(isValidAstNode(node), false, `Expected invalid AST node: ${JSON.stringify(node)}`);
+    }
+
+    // Depth boundary: exact MAX_AST_DEPTH passes; MAX_AST_DEPTH + 1 fails cleanly without stack overflow
+    let validDeep = "leaf";
+    for (let i = 0; i < MAX_AST_DEPTH; i++) {
+        validDeep = [8, "span", [validDeep]];
+    }
+    assert.equal(isValidAstNode(validDeep), true);
+
+    const tooDeep = [8, "span", [validDeep]];
+    assert.equal(isValidAstNode(tooDeep), false);
 });
 
 test("Full ar.json and complex_ar.json pass runtime dictionary validation", () => {
@@ -95,12 +114,42 @@ async function loadEsbuild() {
     }
 }
 
-test("Plugin lifecycle: stop restores dynamic locales/formatters & guards concurrent/failed sync", async t => {
+function captureGlobals(keys) {
+    const snapshot = new Map();
+    for (const key of keys) {
+        snapshot.set(key, {
+            existed: Object.prototype.hasOwnProperty.call(globalThis, key),
+            value: globalThis[key],
+        });
+    }
+    return () => {
+        for (const [key, entry] of snapshot.entries()) {
+            if (entry.existed) {
+                globalThis[key] = entry.value;
+            } else {
+                delete globalThis[key];
+            }
+        }
+    };
+}
+
+test("Plugin lifecycle: 10x start/stop stress, locale switch, in-flight stop race, and failed sync", async t => {
     const esbuild = await loadEsbuild();
     if (!esbuild) {
         t.skip("esbuild unavailable outside Vencord workspace");
         return;
     }
+
+    const restoreGlobals = captureGlobals([
+        "__ARABIC_TEST_HARNESS__",
+        "window",
+        "DiscordNative",
+        "MutationObserver",
+        "document",
+        "fetch",
+        "setTimeout",
+        "clearTimeout",
+    ]);
 
     const harness = {
         store: new Map(),
@@ -110,13 +159,9 @@ test("Plugin lifecycle: stop restores dynamic locales/formatters & guards concur
         currentMomentLocale: "en",
         currentIntlLocale: "en-US",
         localeEmits: 0,
-        origDateFormatterCalls: 0,
         discordUtils: {
-            createDateFormatter(locale, _opts) {
-                return () => {
-                    harness.origDateFormatterCalls++;
-                    return `native:${locale}`;
-                };
+            createDateFormatter(locale) {
+                return () => `native:${locale}`;
             },
         },
         intlObject: {
@@ -133,20 +178,20 @@ test("Plugin lifecycle: stop restores dynamic locales/formatters & guards concur
     };
     const origDateFormatter = harness.discordUtils.createDateFormatter;
 
+    const rootAttrs = new Map();
+    const rootStyle = new Map();
     globalThis.__ARABIC_TEST_HARNESS__ = harness;
     globalThis.window = globalThis;
     globalThis.setTimeout = setTimeout;
     globalThis.clearTimeout = clearTimeout;
+    globalThis.MutationObserver = class {
+        observe() {}
+        disconnect() {}
+    };
     globalThis.DiscordNative = {
         nativeModules: {
             requireModule: name => (name === "discord_utils" ? harness.discordUtils : undefined),
         },
-    };
-    const rootAttrs = new Map();
-    const rootStyle = new Map();
-    globalThis.MutationObserver = class {
-        observe() {}
-        disconnect() {}
     };
     globalThis.document = {
         readyState: "complete",
@@ -186,10 +231,7 @@ test("Plugin lifecycle: stop restores dynamic locales/formatters & guards concur
         "@api/Settings": `
             export const definePluginSettings = def => {
                 const store = Object.fromEntries(Object.entries(def).map(([k, v]) => [k, v.default]));
-                return {
-                    store,
-                    use: () => store,
-                };
+                return { store, use: () => store };
             };
         `,
         "@api/Styles": `
@@ -263,7 +305,7 @@ test("Plugin lifecycle: stop restores dynamic locales/formatters & guards concur
 
     let fetchMode = "ok";
     let fetchCount = 0;
-    const prevFetch = globalThis.fetch;
+    let deferredFetchGate = null;
     globalThis.fetch = async url => {
         fetchCount++;
         if (fetchMode === "fail") {
@@ -275,11 +317,15 @@ test("Plugin lifecycle: stop restores dynamic locales/formatters & guards concur
                 status: 200,
                 json: async () =>
                     (String(url).includes("complex")
-                        ? { broken: [[6, "c", { one: [7, "x"] }, 0, "cardinal"]] }
+                        ? { broken: [[6, "c", { one: ["x"] }, 0, "cardinal"]] }
                         : arJson),
             };
         }
-        await new Promise(r => setTimeout(r, 20));
+        if (deferredFetchGate) {
+            await deferredFetchGate;
+        } else {
+            await new Promise(r => setTimeout(r, 15));
+        }
         return {
             ok: true,
             status: 200,
@@ -328,19 +374,6 @@ test("Plugin lifecycle: stop restores dynamic locales/formatters & guards concur
         const { default: plugin } = await import(pathToFileURL(tmpOut).href);
         pluginRef = plugin;
 
-        // 1. Start plugin -> patches formatter, locale, styles, caches dictionaries
-        plugin.start();
-        await new Promise(r => setTimeout(r, 60));
-
-        assert.equal(harness.stylesEnabled, true);
-        assert.equal(rootAttrs.get("data-arabic-font"), "cairo");
-        assert.equal(rootAttrs.get("dir"), "ltr");
-        assert.notEqual(harness.discordUtils.createDateFormatter, origDateFormatter);
-        assert.equal(harness.currentMomentLocale, "ar-discord");
-        assert.equal(harness.currentIntlLocale, "ar-u-nu-latn");
-        assert.ok(harness.store.get("ArabicDiscord_ar_v1")?.byText);
-
-        // Concurrent manual refresh guard prevents overlapping fetches
         function findMenuAction(node, id) {
             if (!node || typeof node !== "object") return null;
             if (node.props?.id === id && typeof node.props.action === "function") {
@@ -355,15 +388,26 @@ test("Plugin lifecycle: stop restores dynamic locales/formatters & guards concur
             return null;
         }
 
-        const rtlToggle = findMenuAction(
-            plugin.toolboxActions(),
-            "arabic-discord-rtl-toggle",
-        );
+        // 1. Start plugin -> patches formatter, locale, styles, caches dictionaries
+        plugin.start();
+        await new Promise(r => setTimeout(r, 60));
+
+        assert.equal(harness.stylesEnabled, true);
+        assert.equal(rootAttrs.get("data-arabic-font"), "cairo");
+        assert.equal(rootAttrs.get("dir"), "ltr");
+        assert.notEqual(harness.discordUtils.createDateFormatter, origDateFormatter);
+        assert.equal(harness.currentMomentLocale, "ar-discord");
+        assert.equal(harness.currentIntlLocale, "ar-u-nu-latn");
+        assert.ok(harness.store.get("ArabicDiscord_ar_v1")?.byText);
+
+        // Toggle RTL from toolbox & verify attributes
+        const rtlToggle = findMenuAction(plugin.toolboxActions(), "arabic-discord-rtl-toggle");
         assert.equal(typeof rtlToggle, "function");
         rtlToggle();
         assert.equal(rootAttrs.get("data-arabic-rtl"), "1");
         assert.equal(rootAttrs.get("dir"), "rtl");
 
+        // Concurrent manual refresh guard prevents overlapping fetches
         const refreshAction = findMenuAction(
             plugin.toolboxActions(),
             "arabic-discord-update-translations",
@@ -389,8 +433,18 @@ test("Plugin lifecycle: stop restores dynamic locales/formatters & guards concur
         assert.equal(harness.toasts.at(-1)?.variant, "critical");
         assert.ok(harness.store.get("ArabicDiscord_complex_v1") && !harness.store.get("ArabicDiscord_complex_v1").broken);
 
-        // 2. Stop plugin -> must restore original formatter cleanly without re-patching
+        // 2. Stop during an in-flight fetch must not leave plugin active or styles enabled
+        fetchMode = "ok";
+        let releaseFetch;
+        deferredFetchGate = new Promise(resolve => {
+            releaseFetch = resolve;
+        });
+        refreshAction();
         plugin.stop();
+        releaseFetch();
+        deferredFetchGate = null;
+        await new Promise(r => setTimeout(r, 30));
+
         assert.equal(harness.stylesEnabled, false);
         assert.equal(rootAttrs.has("data-arabic-font"), false);
         assert.equal(rootAttrs.has("data-arabic-rtl"), false);
@@ -398,27 +452,36 @@ test("Plugin lifecycle: stop restores dynamic locales/formatters & guards concur
         assert.equal(harness.currentMomentLocale, "en");
         assert.equal(harness.currentIntlLocale, "en-US");
 
-        // 3. Switch Discord language while stopped -> restart & stop must restore NEW language
-        harness.currentMomentLocale = "fr";
-        harness.intlObject.setLocale("fr");
-        fetchMode = "ok";
-        plugin.start();
-        await new Promise(r => setTimeout(r, 40));
-        assert.equal(harness.currentMomentLocale, "ar-discord");
-        assert.equal(harness.currentIntlLocale, "ar-u-nu-latn");
+        // 3. Stress test: 10 consecutive start/stop cycles + Discord locale changes leave zero leaks
+        const testLocales = ["fr", "de", "ja", "es-ES", "en-US"];
+        for (let i = 0; i < 10; i++) {
+            const expectedLocale = testLocales[i % testLocales.length];
+            harness.currentMomentLocale = expectedLocale;
+            harness.intlObject.setLocale(expectedLocale);
 
-        plugin.stop();
-        assert.equal(harness.discordUtils.createDateFormatter, origDateFormatter);
-        assert.equal(harness.currentMomentLocale, "fr");
-        assert.equal(harness.currentIntlLocale, "fr");
+            plugin.start();
+            await new Promise(r => setTimeout(r, 10));
+            assert.equal(harness.stylesEnabled, true);
+            assert.equal(harness.currentMomentLocale, "ar-discord");
+            assert.equal(harness.currentIntlLocale, "ar-u-nu-latn");
+            assert.notEqual(harness.discordUtils.createDateFormatter, origDateFormatter);
+
+            plugin.stop();
+            assert.equal(harness.stylesEnabled, false);
+            assert.equal(harness.discordUtils.createDateFormatter, origDateFormatter);
+            assert.equal(harness.currentMomentLocale, expectedLocale);
+            assert.equal(harness.currentIntlLocale, expectedLocale);
+            for (const handlers of harness.fluxHandlers.values()) {
+                assert.equal(handlers.size, 0, "Expected Flux handlers unsubscribed after stop()");
+            }
+        }
     } finally {
         try {
             pluginRef?.stop?.();
         } catch {
             // Ignore cleanup errors if test failed mid-setup
         }
-        globalThis.fetch = prevFetch;
-        delete globalThis.__ARABIC_TEST_HARNESS__;
+        restoreGlobals();
         if (fs.existsSync(tmpOut)) fs.unlinkSync(tmpOut);
     }
 });

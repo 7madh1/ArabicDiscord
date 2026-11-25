@@ -5,6 +5,7 @@
  */
 
 export const VALID_PLURAL_CATEGORIES = new Set(["zero", "one", "two", "few", "many", "other"]);
+export const MAX_AST_DEPTH = 32;
 
 export function isPlainObject(value) {
     return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -14,9 +15,14 @@ export function isPlainObject(value) {
  * Validates a compiled Discord/FormatJS AST node strictly by node kind (1..8).
  * @param {unknown} node
  * @param {(message: string) => void} [onIssue]
+ * @param {number} [depth]
  * @returns {boolean}
  */
-export function isValidAstNode(node, onIssue) {
+export function isValidAstNode(node, onIssue, depth = 0) {
+    if (depth > MAX_AST_DEPTH) {
+        return false;
+    }
+
     if (typeof node === "string") {
         onIssue?.(node);
         return true;
@@ -63,6 +69,11 @@ export function isValidAstNode(node, onIssue) {
         const branches = node[2];
         if (!isPlainObject(branches)) return false;
 
+        // ICU plural requires an explicit `other` fallback branch (some Discord enum selects omit it)
+        if (kind === 6 && !Object.prototype.hasOwnProperty.call(branches, "other")) {
+            return false;
+        }
+
         const entries = Object.entries(branches);
         if (entries.length === 0) return false;
 
@@ -76,7 +87,7 @@ export function isValidAstNode(node, onIssue) {
             }
             if (!Array.isArray(branchNodes)) return false;
             for (const child of branchNodes) {
-                if (!isValidAstNode(child, onIssue)) return false;
+                if (!isValidAstNode(child, onIssue, depth + 1)) return false;
             }
         }
         return true;
@@ -89,11 +100,11 @@ export function isValidAstNode(node, onIssue) {
         if (node.length === 4 && !Array.isArray(node[3])) return false;
 
         for (const child of node[2]) {
-            if (!isValidAstNode(child, onIssue)) return false;
+            if (!isValidAstNode(child, onIssue, depth + 1)) return false;
         }
         if (node.length === 4) {
             for (const child of node[3]) {
-                if (!isValidAstNode(child, onIssue)) return false;
+                if (!isValidAstNode(child, onIssue, depth + 1)) return false;
             }
         }
         return true;

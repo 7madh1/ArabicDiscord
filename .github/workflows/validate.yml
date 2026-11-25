@@ -23,6 +23,9 @@ jobs:
             - name: Validate translations, AST, CSS, and plugin metadata
               run: node scripts/validate.mjs
 
+            - name: Run AST schema & dictionary unit tests
+              run: node --test scripts/runtime.test.mjs
+
     vencord-build:
         runs-on: ubuntu-latest
         steps:
@@ -62,9 +65,13 @@ jobs:
               working-directory: vencord
               run: pnpm exec oxfmt --check src/userplugins/arabicDiscord/styles.css src/userplugins/arabicDiscord/ar.json src/userplugins/arabicDiscord/complex_ar.json src/userplugins/arabicDiscord/.github/workflows/validate.yml
 
-            - name: Lint plugin
+            - name: Lint plugin & scripts
               working-directory: vencord
-              run: pnpm exec oxlint src/userplugins/arabicDiscord/index.tsx src/userplugins/arabicDiscord/scripts/validate.mjs
+              run: pnpm exec oxlint src/userplugins/arabicDiscord/index.tsx src/userplugins/arabicDiscord/validation.mjs src/userplugins/arabicDiscord/scripts/validate.mjs src/userplugins/arabicDiscord/scripts/runtime.test.mjs
+
+            - name: Run runtime lifecycle & AST tests
+              working-directory: vencord
+              run: node --test src/userplugins/arabicDiscord/scripts/runtime.test.mjs
 
             - name: TypeScript check
               working-directory: vencord

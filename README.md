@@ -41,9 +41,17 @@
 
 ---
 
-## التحقق التلقائي (CI Validation)
+## التطوير والاختبارات (Development & Tests)
 
-يتضمن المستودع فحصًا آليًا عبر GitHub Actions (`.github/workflows/validate.yml` و`scripts/validate.mjs`) للتحقق من سلامة ملفات `ar.json` و`complex_ar.json` وصيغ AST وعلامات الترقيم والأقواس وسلامة `styles.css` و`index.tsx` مع كل دفع أو طلب دمج.
+- **فحص القواميس والـ AST وCSS**:
+  ```bash
+  node scripts/validate.mjs
+  ```
+- **اختبارات المخطط ودورة التشغيل (`start`/`stop` وتحديث القواميس)**:
+  ```bash
+  node --test scripts/runtime.test.mjs
+  ```
+- يتضمن المستودع أيضًا فحصًا آليًا عبر GitHub Actions (`.github/workflows/validate.yml`) يشمل التحقق الصارم من بنية AST ومخططات Node، واختبارات دورة التشغيل، و`oxfmt`، و`oxlint`، و`tsc --noEmit`، وبناء `Vencord` كاملًا مع كل دفع أو طلب دمج.
 
 ---
 

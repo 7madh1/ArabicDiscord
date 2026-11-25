@@ -17,6 +17,7 @@ import { find, waitFor } from "@webpack";
 import { FluxDispatcher, i18n, LocaleStore, Menu, moment, React, showToast } from "@webpack/common";
 
 import managedStyle from "./styles.css?managed";
+import { isValidDictionaries } from "./validation.mjs";
 
 const logger = new Logger("ArabicDiscord");
 
@@ -1370,6 +1371,7 @@ function applyLoadedDictionaries(
     complexDict: Record<string, unknown[]>,
     triggerRerender = true,
 ) {
+    if (!active) return;
     activeDict = arDict;
     complexArMap = new Map(Object.entries(complexDict));
     cachedLookups = null;
@@ -1379,7 +1381,6 @@ function applyLoadedDictionaries(
     translatedPlaceholders = new WeakMap();
     byAccessor = new WeakMap();
 
-    if (!active) return;
     const lookups = buildTranslationLookups();
     if (triggerRerender) {
         if (document.body) {
@@ -1387,82 +1388,6 @@ function applyLoadedDictionaries(
         }
         applyArabicDateSystem(true);
     }
-}
-
-const VALID_PLURAL_CATEGORIES = new Set(["zero", "one", "two", "few", "many", "other"]);
-
-function isValidAstNode(node: unknown): boolean {
-    if (typeof node === "string") return true;
-    if (!Array.isArray(node) || node.length === 0) return false;
-
-    const kind = node[0];
-    if (typeof kind !== "number" || !Number.isInteger(kind) || kind < 1 || kind > 8) {
-        return false;
-    }
-
-    if (kind === 5 || kind === 6) {
-        const branches = node[2];
-        if (!branches || typeof branches !== "object" || Array.isArray(branches)) {
-            return false;
-        }
-        for (const [cat, branchNodes] of Object.entries(branches as Record<string, unknown>)) {
-            if (
-                kind === 6 &&
-                !VALID_PLURAL_CATEGORIES.has(cat) &&
-                !/^=-?\d+$/.test(cat)
-            ) {
-                return false;
-            }
-            if (!Array.isArray(branchNodes)) return false;
-            for (const child of branchNodes) {
-                if (!isValidAstNode(child)) return false;
-            }
-        }
-        return true;
-    }
-
-    if (kind === 8) {
-        const children = node[2];
-        if (!Array.isArray(children)) return false;
-        for (const child of children) {
-            if (!isValidAstNode(child)) return false;
-        }
-        return true;
-    }
-
-    return true;
-}
-
-function isValidDictionaries(
-    arJson: unknown,
-    complexJson: unknown,
-): arJson is TranslationDict & { byText: Record<string, string> } {
-    if (!arJson || typeof arJson !== "object" || Array.isArray(arJson)) return false;
-    if (!complexJson || typeof complexJson !== "object" || Array.isArray(complexJson)) return false;
-
-    const ar = arJson as TranslationDict;
-    if (!ar.byText || typeof ar.byText !== "object" || Array.isArray(ar.byText)) return false;
-    if (ar.byKey != null && (typeof ar.byKey !== "object" || Array.isArray(ar.byKey))) return false;
-
-    const textEntries = Object.values(ar.byText);
-    const complexEntries = Object.values(complexJson as Record<string, unknown>);
-    if (textEntries.length < 100 || complexEntries.length < 100) return false;
-
-    for (const v of textEntries) {
-        if (typeof v !== "string" || !v.trim()) return false;
-    }
-    if (ar.byKey) {
-        for (const v of Object.values(ar.byKey)) {
-            if (typeof v !== "string" || !v.trim()) return false;
-        }
-    }
-    for (const ast of complexEntries) {
-        if (!Array.isArray(ast)) return false;
-        for (const node of ast) {
-            if (!isValidAstNode(node)) return false;
-        }
-    }
-    return true;
 }
 
 async function refreshRemoteTranslations(manual: boolean): Promise<boolean> {
@@ -1481,7 +1406,7 @@ async function refreshRemoteTranslations(manual: boolean): Promise<boolean> {
             complexRes.json(),
         ])) as [TranslationDict, Record<string, unknown[]>];
 
-        if (!isValidDictionaries(arJson, complexJson)) {
+        if (!isValidDictionaries(arJson, complexJson) || !arJson.byText) {
             throw new Error("Invalid or incomplete translation payload");
         }
 
@@ -1526,7 +1451,7 @@ async function initDictionaries() {
             DS_META_KEY,
         ])) as [TranslationDict | undefined, Record<string, unknown[]> | undefined, TranslationMeta | undefined];
 
-        if (cachedComplex && isValidDictionaries(cachedAr, cachedComplex)) {
+        if (cachedAr && cachedComplex && isValidDictionaries(cachedAr, cachedComplex)) {
             applyLoadedDictionaries(cachedAr, cachedComplex, true);
             const isStale = !meta?.updatedAt || Date.now() - meta.updatedAt >= UPDATE_INTERVAL_MS;
             if (isStale) {

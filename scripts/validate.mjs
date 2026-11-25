@@ -8,6 +8,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { isPlainObject, isValidAstNode } from "../validation.mjs";
+
 const pluginDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function fail(msg) {
@@ -26,8 +28,8 @@ const css = fs.readFileSync(cssPath, "utf8");
 const idx = fs.readFileSync(indexPath, "utf8");
 
 // 1. Validate ar.json structure, digits, spacing, and empty values
-if (!ar.byText || typeof ar.byText !== "object") fail("ar.json missing byText object");
-if (!ar.byKey || typeof ar.byKey !== "object") fail("ar.json missing byKey object");
+if (!isPlainObject(ar.byText)) fail("ar.json missing byText object");
+if (!isPlainObject(ar.byKey)) fail("ar.json missing byKey object");
 
 const indicRe = /[\u0660-\u0669\u06F0-\u06F9\u066A]/;
 const doubleSpaceRe = /  +/;
@@ -53,80 +55,36 @@ for (const [storeName, store] of [["byText", ar.byText], ["byKey", ar.byKey]]) {
     }
 }
 
-// 2. Validate complex_ar.json AST nodes
-const validPluralCats = new Set(["=0", "=1", "=2", "zero", "one", "two", "few", "many", "other"]);
+// 2. Validate complex_ar.json AST nodes using shared strict schema validator
 let cxIssues = 0;
-
-function checkAst(key, node) {
-    if (cxIssues >= 25) return;
-    if (typeof node === "string") {
-        if (indicRe.test(node)) {
-            fail(`complex_ar[${key}] contains Arabic-Indic digit: ${JSON.stringify(node)}`);
-            cxIssues++;
-        } else if (doubleSpaceRe.test(node)) {
-            fail(`complex_ar[${key}] contains double space: ${JSON.stringify(node)}`);
-            cxIssues++;
-        } else if (strictPunctRe.test(node)) {
-            fail(`complex_ar[${key}] contains punctuation glitch: ${JSON.stringify(node)}`);
-            cxIssues++;
-        }
-        return;
-    }
-    if (!Array.isArray(node)) {
-        fail(`complex_ar[${key}] unexpected non-array AST node`);
-        cxIssues++;
-        return;
-    }
-    const kind = node[0];
-    if (kind === 6) {
-        const branches = node[2];
-        if (!branches || typeof branches !== "object") {
-            fail(`complex_ar[${key}] plural node missing branches`);
-            cxIssues++;
-            return;
-        }
-        for (const [cat, branchNodes] of Object.entries(branches)) {
-            if (!validPluralCats.has(cat) && !/^=-?\d+$/.test(cat)) {
-                fail(`complex_ar[${key}] invalid plural category ${cat}`);
-                cxIssues++;
-            }
-            if (Array.isArray(branchNodes)) {
-                for (const child of branchNodes) checkAst(key, child);
-            }
-        }
-        return;
-    }
-    if (kind === 8) {
-        const children = node[2];
-        if (!Array.isArray(children)) {
-            fail(`complex_ar[${key}] tag node missing children array`);
-            cxIssues++;
-            return;
-        }
-        for (const child of children) checkAst(key, child);
-        return;
-    }
-    if (kind === 5) {
-        const branches = node[2];
-        if (branches && typeof branches === "object") {
-            for (const branchNodes of Object.values(branches)) {
-                if (Array.isArray(branchNodes)) {
-                    for (const child of branchNodes) checkAst(key, child);
-                }
-            }
-        }
-    }
-}
-
 for (const [key, ast] of Object.entries(cx)) {
     if (!Array.isArray(ast)) {
         fail(`complex_ar[${key}] root is not an array`);
+        cxIssues++;
         continue;
     }
-    for (const node of ast) checkAst(key, node);
+    for (const node of ast) {
+        if (cxIssues >= 25) break;
+        const ok = isValidAstNode(node, text => {
+            if (indicRe.test(text)) {
+                fail(`complex_ar[${key}] contains Arabic-Indic digit: ${JSON.stringify(text)}`);
+                cxIssues++;
+            } else if (doubleSpaceRe.test(text)) {
+                fail(`complex_ar[${key}] contains double space: ${JSON.stringify(text)}`);
+                cxIssues++;
+            } else if (strictPunctRe.test(text)) {
+                fail(`complex_ar[${key}] contains punctuation glitch: ${JSON.stringify(text)}`);
+                cxIssues++;
+            }
+        });
+        if (!ok) {
+            fail(`complex_ar[${key}] failed strict AST schema check: ${JSON.stringify(node)}`);
+            cxIssues++;
+        }
+    }
 }
 
-// 3. Validate styles.css brace balance & index.tsx header
+// 3. Validate styles.css brace balance & index.tsx metadata
 let depth = 0;
 for (const ch of css) {
     if (ch === "{") depth++;

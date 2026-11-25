@@ -1,4 +1,4 @@
-name: Validate ArabicDiscord
+name: Validate & Build ArabicDiscord
 
 on:
     push:
@@ -12,7 +12,7 @@ jobs:
     validate:
         runs-on: ubuntu-latest
         steps:
-            - name: Checkout repository
+            - name: Checkout ArabicDiscord
               uses: actions/checkout@v4
 
             - name: Setup Node.js
@@ -22,3 +22,54 @@ jobs:
 
             - name: Validate translations, AST, CSS, and plugin metadata
               run: node scripts/validate.mjs
+
+    vencord-build:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout ArabicDiscord
+              uses: actions/checkout@v4
+              with:
+                  path: arabicDiscord
+
+            - name: Checkout Vencord
+              uses: actions/checkout@v4
+              with:
+                  repository: Vendicated/Vencord
+                  path: vencord
+
+            - name: Install plugin into Vencord userplugins
+              run: |
+                  mkdir -p vencord/src/userplugins/arabicDiscord
+                  cp -a arabicDiscord/. vencord/src/userplugins/arabicDiscord/
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: "12.15.0"
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+                  cache: "pnpm"
+                  cache-dependency-path: vencord/pnpm-lock.yaml
+
+            - name: Install dependencies
+              working-directory: vencord
+              run: pnpm install --frozen-lockfile
+
+            - name: Check formatting
+              working-directory: vencord
+              run: pnpm exec oxfmt --check src/userplugins/arabicDiscord/styles.css src/userplugins/arabicDiscord/ar.json src/userplugins/arabicDiscord/complex_ar.json src/userplugins/arabicDiscord/.github/workflows/validate.yml
+
+            - name: Lint plugin
+              working-directory: vencord
+              run: pnpm exec oxlint src/userplugins/arabicDiscord/index.tsx src/userplugins/arabicDiscord/scripts/validate.mjs
+
+            - name: TypeScript check
+              working-directory: vencord
+              run: pnpm test:ts
+
+            - name: Build Vencord with ArabicDiscord
+              working-directory: vencord
+              run: pnpm buildStandalone

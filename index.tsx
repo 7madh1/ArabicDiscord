@@ -436,9 +436,13 @@ function applyArabicMomentLocale(): boolean {
                 moment.locale("ar-discord");
                 return true;
             }
-        } else if (prevMomentLocale && moment.locale() !== prevMomentLocale) {
-            moment.locale(prevMomentLocale);
-            return true;
+        } else if (prevMomentLocale) {
+            const targetLocale = prevMomentLocale;
+            prevMomentLocale = null;
+            if (moment.locale() !== targetLocale) {
+                moment.locale(targetLocale);
+                return true;
+            }
         }
     } catch {
         // Ignore if moment isn't ready yet
@@ -476,9 +480,13 @@ function applyArabicDateSystem(forceEmit = false) {
                     intlObj.setLocale(ARABIC_DATE_LOCALE);
                     changed = true;
                 }
-            } else if (prevIntlLocale && intlObj.currentLocale === ARABIC_DATE_LOCALE) {
-                intlObj.setLocale(prevIntlLocale);
-                changed = true;
+            } else if (prevIntlLocale) {
+                const targetIntlLocale = prevIntlLocale;
+                prevIntlLocale = null;
+                if (intlObj.currentLocale === ARABIC_DATE_LOCALE) {
+                    intlObj.setLocale(targetIntlLocale);
+                    changed = true;
+                }
             }
         }
 
@@ -1381,6 +1389,50 @@ function applyLoadedDictionaries(
     }
 }
 
+const VALID_PLURAL_CATEGORIES = new Set(["zero", "one", "two", "few", "many", "other"]);
+
+function isValidAstNode(node: unknown): boolean {
+    if (typeof node === "string") return true;
+    if (!Array.isArray(node) || node.length === 0) return false;
+
+    const kind = node[0];
+    if (typeof kind !== "number" || !Number.isInteger(kind) || kind < 1 || kind > 8) {
+        return false;
+    }
+
+    if (kind === 5 || kind === 6) {
+        const branches = node[2];
+        if (!branches || typeof branches !== "object" || Array.isArray(branches)) {
+            return false;
+        }
+        for (const [cat, branchNodes] of Object.entries(branches as Record<string, unknown>)) {
+            if (
+                kind === 6 &&
+                !VALID_PLURAL_CATEGORIES.has(cat) &&
+                !/^=-?\d+$/.test(cat)
+            ) {
+                return false;
+            }
+            if (!Array.isArray(branchNodes)) return false;
+            for (const child of branchNodes) {
+                if (!isValidAstNode(child)) return false;
+            }
+        }
+        return true;
+    }
+
+    if (kind === 8) {
+        const children = node[2];
+        if (!Array.isArray(children)) return false;
+        for (const child of children) {
+            if (!isValidAstNode(child)) return false;
+        }
+        return true;
+    }
+
+    return true;
+}
+
 function isValidDictionaries(
     arJson: unknown,
     complexJson: unknown,
@@ -1406,6 +1458,9 @@ function isValidDictionaries(
     }
     for (const ast of complexEntries) {
         if (!Array.isArray(ast)) return false;
+        for (const node of ast) {
+            if (!isValidAstNode(node)) return false;
+        }
     }
     return true;
 }
@@ -1700,6 +1755,8 @@ export default definePlugin({
         clearStyles();
         applyArabicDateSystem();
         restoreNativeDateFormatter();
+        prevMomentLocale = null;
+        prevIntlLocale = null;
 
         if (stopDomFallbackFn) {
             stopDomFallbackFn();

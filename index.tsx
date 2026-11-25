@@ -315,6 +315,8 @@ const patchedDateFormatters: PatchedDateFormatterEntry[] = [];
 let isSyncingDateLocale = false;
 
 function patchNativeDateFormatter(): boolean {
+    if (!active) return false;
+
     const candidates: Array<Record<string, any> | undefined> = [
         (window as any).DiscordNative?.nativeModules?.requireModule?.("discord_utils"),
     ];
@@ -352,11 +354,13 @@ function patchNativeDateFormatter(): boolean {
     return patchedAny;
 }
 
-function restoreNativeDateFormatter() {
+function restoreNativeDateFormatter(): boolean {
+    const restored = patchedDateFormatters.length > 0;
     while (patchedDateFormatters.length > 0) {
         const entry = patchedDateFormatters.pop()!;
         entry.target.createDateFormatter = entry.orig;
     }
+    return restored;
 }
 
 function formatArabicUnit(
@@ -447,7 +451,9 @@ function applyArabicDateSystem(forceEmit = false) {
     isSyncingDateLocale = true;
     try {
         const enableDates = active;
-        let changed = patchNativeDateFormatter();
+        let changed = enableDates
+            ? patchNativeDateFormatter()
+            : restoreNativeDateFormatter();
         if (applyArabicMomentLocale()) changed = true;
 
         const intlObj = i18n?.intl as
@@ -1375,6 +1381,35 @@ function applyLoadedDictionaries(
     }
 }
 
+function isValidDictionaries(
+    arJson: unknown,
+    complexJson: unknown,
+): arJson is TranslationDict & { byText: Record<string, string> } {
+    if (!arJson || typeof arJson !== "object" || Array.isArray(arJson)) return false;
+    if (!complexJson || typeof complexJson !== "object" || Array.isArray(complexJson)) return false;
+
+    const ar = arJson as TranslationDict;
+    if (!ar.byText || typeof ar.byText !== "object" || Array.isArray(ar.byText)) return false;
+    if (ar.byKey != null && (typeof ar.byKey !== "object" || Array.isArray(ar.byKey))) return false;
+
+    const textEntries = Object.values(ar.byText);
+    const complexEntries = Object.values(complexJson as Record<string, unknown>);
+    if (textEntries.length < 100 || complexEntries.length < 100) return false;
+
+    for (const v of textEntries) {
+        if (typeof v !== "string" || !v.trim()) return false;
+    }
+    if (ar.byKey) {
+        for (const v of Object.values(ar.byKey)) {
+            if (typeof v !== "string" || !v.trim()) return false;
+        }
+    }
+    for (const ast of complexEntries) {
+        if (!Array.isArray(ast)) return false;
+    }
+    return true;
+}
+
 async function refreshRemoteTranslations(manual: boolean): Promise<boolean> {
     if (isCheckingRemoteUpdates) return false;
     isCheckingRemoteUpdates = true;
@@ -1391,15 +1426,12 @@ async function refreshRemoteTranslations(manual: boolean): Promise<boolean> {
             complexRes.json(),
         ])) as [TranslationDict, Record<string, unknown[]>];
 
-        if (!arJson?.byText || typeof arJson.byText !== "object" || !complexJson || typeof complexJson !== "object") {
-            throw new Error("Invalid translation payload");
+        if (!isValidDictionaries(arJson, complexJson)) {
+            throw new Error("Invalid or incomplete translation payload");
         }
 
         const arCount = Object.keys(arJson.byText).length;
         const complexCount = Object.keys(complexJson).length;
-        if (arCount < 100 || complexCount < 100) {
-            throw new Error("Incomplete translation payload");
-        }
 
         const meta: TranslationMeta = { updatedAt: Date.now(), arCount, complexCount };
         await DataStore.setMany([
@@ -1439,7 +1471,7 @@ async function initDictionaries() {
             DS_META_KEY,
         ])) as [TranslationDict | undefined, Record<string, unknown[]> | undefined, TranslationMeta | undefined];
 
-        if (cachedAr?.byText && cachedComplex && Object.keys(cachedAr.byText).length > 100) {
+        if (cachedComplex && isValidDictionaries(cachedAr, cachedComplex)) {
             applyLoadedDictionaries(cachedAr, cachedComplex, true);
             const isStale = !meta?.updatedAt || Date.now() - meta.updatedAt >= UPDATE_INTERVAL_MS;
             if (isStale) {
@@ -1666,8 +1698,8 @@ export default definePlugin({
         }
 
         clearStyles();
-        restoreNativeDateFormatter();
         applyArabicDateSystem();
+        restoreNativeDateFormatter();
 
         if (stopDomFallbackFn) {
             stopDomFallbackFn();

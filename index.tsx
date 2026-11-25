@@ -43,6 +43,8 @@ interface TranslationMeta {
 let activeDict: TranslationDict = {};
 let complexArMap = new Map<string, unknown[]>();
 let isCheckingRemoteUpdates = false;
+let lifecycleGeneration = 0;
+let activeFetchController: AbortController | null = null;
 const seenUntranslated = new Set<string>();
 const HAS_LATIN_RE = /[A-Za-z]/;
 const HAS_DIGIT_RE = /\d/;
@@ -1391,13 +1393,20 @@ function applyLoadedDictionaries(
 }
 
 async function refreshRemoteTranslations(manual: boolean): Promise<boolean> {
-    if (isCheckingRemoteUpdates) return false;
+    if (!active || isCheckingRemoteUpdates) return false;
+    const gen = lifecycleGeneration;
+    const controller = typeof AbortController === "function" ? new AbortController() : null;
     isCheckingRemoteUpdates = true;
+    activeFetchController = controller;
     try {
+        const init: RequestInit = controller
+            ? { cache: "no-cache", signal: controller.signal }
+            : { cache: "no-cache" };
         const [arRes, complexRes] = await Promise.all([
-            fetch(REMOTE_AR_URL, { cache: "no-cache" }),
-            fetch(REMOTE_COMPLEX_URL, { cache: "no-cache" }),
+            fetch(REMOTE_AR_URL, init),
+            fetch(REMOTE_COMPLEX_URL, init),
         ]);
+        if (!active || gen !== lifecycleGeneration) return false;
         if (!arRes.ok || !complexRes.ok) {
             throw new Error(`HTTP ${arRes.status}/${complexRes.status}`);
         }
@@ -1406,6 +1415,7 @@ async function refreshRemoteTranslations(manual: boolean): Promise<boolean> {
             complexRes.json(),
         ])) as [TranslationDict, Record<string, unknown[]>];
 
+        if (!active || gen !== lifecycleGeneration) return false;
         if (!isValidDictionaries(arJson, complexJson) || !arJson.byText) {
             throw new Error("Invalid or incomplete translation payload");
         }
@@ -1419,10 +1429,11 @@ async function refreshRemoteTranslations(manual: boolean): Promise<boolean> {
             [DS_COMPLEX_KEY, complexJson],
             [DS_META_KEY, meta],
         ]);
+        if (!active || gen !== lifecycleGeneration) return false;
         applyLoadedDictionaries(arJson, complexJson, true);
         logger.info(`Loaded remote Arabic dictionaries (${arCount} simple, ${complexCount} complex).`);
 
-        if (manual) {
+        if (manual && active && gen === lifecycleGeneration) {
             showToast({
                 text: `تم تحديث القاموس (${arCount.toLocaleString("en-US")} نص)`,
                 variant: "success",
@@ -1430,6 +1441,9 @@ async function refreshRemoteTranslations(manual: boolean): Promise<boolean> {
         }
         return true;
     } catch (err) {
+        if (!active || gen !== lifecycleGeneration || controller?.signal.aborted) {
+            return false;
+        }
         logger.warn("Failed to fetch remote Arabic translations:", err);
         if (manual) {
             showToast({
@@ -1439,17 +1453,25 @@ async function refreshRemoteTranslations(manual: boolean): Promise<boolean> {
         }
         return false;
     } finally {
-        isCheckingRemoteUpdates = false;
+        if (gen === lifecycleGeneration) {
+            isCheckingRemoteUpdates = false;
+            if (activeFetchController === controller) {
+                activeFetchController = null;
+            }
+        }
     }
 }
 
 async function initDictionaries() {
+    const gen = lifecycleGeneration;
     try {
         const [cachedAr, cachedComplex, meta] = (await DataStore.getMany([
             DS_AR_KEY,
             DS_COMPLEX_KEY,
             DS_META_KEY,
         ])) as [TranslationDict | undefined, Record<string, unknown[]> | undefined, TranslationMeta | undefined];
+
+        if (!active || gen !== lifecycleGeneration) return;
 
         if (cachedAr && cachedComplex && isValidDictionaries(cachedAr, cachedComplex)) {
             applyLoadedDictionaries(cachedAr, cachedComplex, true);
@@ -1463,7 +1485,9 @@ async function initDictionaries() {
         logger.warn("Failed to read cached Arabic dictionaries from DataStore:", err);
     }
 
-    await refreshRemoteTranslations(false);
+    if (active && gen === lifecycleGeneration) {
+        await refreshRemoteTranslations(false);
+    }
 }
 
 function patchLoaderPrototype(proto: Record<string, any> | null | undefined) {
@@ -1564,6 +1588,10 @@ export default definePlugin({
     },
 
     start() {
+        lifecycleGeneration++;
+        isCheckingRemoteUpdates = false;
+        activeFetchController?.abort();
+        activeFetchController = null;
         active = true;
         enableStyle(managedStyle);
 
@@ -1647,6 +1675,10 @@ export default definePlugin({
     },
 
     stop() {
+        lifecycleGeneration++;
+        isCheckingRemoteUpdates = false;
+        activeFetchController?.abort();
+        activeFetchController = null;
         active = false;
         activeDict = {};
         complexArMap.clear();

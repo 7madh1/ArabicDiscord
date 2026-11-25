@@ -81,8 +81,29 @@ test("AST schema test matrix validates all node kinds 1..8, plural 'other', and 
     assert.equal(isValidAstNode(tooDeep), false);
 });
 
-test("Full ar.json and complex_ar.json pass runtime dictionary validation", () => {
+test("Full ar.json and complex_ar.json pass runtime dictionary validation and max depth check", () => {
     assert.equal(isValidDictionaries(arJson, complexJson), true);
+
+    let maxObservedDepth = 0;
+    const measureDepth = (node, depth = 0) => {
+        if (depth > maxObservedDepth) maxObservedDepth = depth;
+        if (!Array.isArray(node)) return;
+        const kind = node[0];
+        if (kind === 5 || kind === 6) {
+            for (const branch of Object.values(node[2])) {
+                for (const child of branch) measureDepth(child, depth + 1);
+            }
+        } else if (kind === 8) {
+            for (const child of node[2]) measureDepth(child, depth + 1);
+            if (node[3]) {
+                for (const child of node[3]) measureDepth(child, depth + 1);
+            }
+        }
+    };
+    for (const ast of Object.values(complexJson)) {
+        for (const node of ast) measureDepth(node, 0);
+    }
+    assert.ok(maxObservedDepth > 0 && maxObservedDepth < MAX_AST_DEPTH, `Unexpected depth=${maxObservedDepth}`);
 
     assert.equal(
         isValidDictionaries({ byText: { Settings: "الإعدادات" } }, complexJson),
@@ -451,6 +472,58 @@ test("Plugin lifecycle: 10x start/stop stress, locale switch, in-flight stop rac
         assert.equal(harness.discordUtils.createDateFormatter, origDateFormatter);
         assert.equal(harness.currentMomentLocale, "en");
         assert.equal(harness.currentIntlLocale, "en-US");
+
+        // 2b. Stop -> immediate Start -> delayed stale request from old generation settles late:
+        // must NOT overwrite DataStore, must NOT fire stale toast, and must NOT block new session sync.
+        fetchMode = "ok";
+        let releaseStaleFetch;
+        const staleGate = new Promise(resolve => {
+            releaseStaleFetch = resolve;
+        });
+        let staleCallsRemaining = 2;
+        const origFetchForRace = globalThis.fetch;
+        const seenSignals = [];
+        globalThis.fetch = async (url, opts) => {
+            if (opts?.signal) seenSignals.push(opts.signal);
+            if (staleCallsRemaining > 0) {
+                staleCallsRemaining--;
+                await staleGate;
+                return {
+                    ok: true,
+                    status: 200,
+                    json: async () =>
+                        (String(url).includes("complex")
+                            ? complexJson
+                            : { ...arJson, byText: { ...arJson.byText, __STALE_MARKER__: "قديم" } }),
+                };
+            }
+            return origFetchForRace(url, opts);
+        };
+
+        try {
+            plugin.start();
+            await new Promise(r => setTimeout(r, 15));
+            refreshAction(); // starts gen N fetch (stalled on staleGate)
+            plugin.stop(); // aborts & invalidates gen N
+            assert.equal(seenSignals.at(-1)?.aborted, true);
+
+            const toastsBeforeRestart = harness.toasts.length;
+            plugin.start(); // starts gen N+1
+            refreshAction(); // fresh fetch in gen N+1 must NOT be blocked by old isCheckingRemoteUpdates
+            await new Promise(r => setTimeout(r, 35));
+
+            releaseStaleFetch();
+            await new Promise(r => setTimeout(r, 25));
+
+            assert.equal(harness.store.get("ArabicDiscord_ar_v1")?.byText?.__STALE_MARKER__, undefined);
+            assert.equal(
+                harness.toasts.slice(toastsBeforeRestart).some(toast => toast.variant === "critical"),
+                false,
+            );
+            plugin.stop();
+        } finally {
+            globalThis.fetch = origFetchForRace;
+        }
 
         // 3. Stress test: 10 consecutive start/stop cycles + Discord locale changes leave zero leaks
         const testLocales = ["fr", "de", "ja", "es-ES", "en-US"];

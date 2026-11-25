@@ -247,7 +247,12 @@ test("Plugin lifecycle: 10x start/stop stress, locale switch, in-flight stop rac
             export const get = async k => h().store.get(k);
             export const set = async (k, v) => { h().store.set(k, v); };
             export const getMany = async keys => keys.map(k => h().store.get(k));
-            export const setMany = async entries => { for (const [k, v] of entries) h().store.set(k, v); };
+            export const setMany = async entries => {
+                if (h().beforeSetMany) {
+                    await h().beforeSetMany(entries);
+                }
+                for (const [k, v] of entries) h().store.set(k, v);
+            };
         `,
         "@api/Settings": `
             export const definePluginSettings = def => {
@@ -523,6 +528,63 @@ test("Plugin lifecycle: 10x start/stop stress, locale switch, in-flight stop rac
             plugin.stop();
         } finally {
             globalThis.fetch = origFetchForRace;
+        }
+
+        // 2c. Cache consistency race: Start -> Resolve fetch -> Hold old DataStore.setMany ->
+        // Stop -> Start new generation -> New refresh -> Release old setMany -> Complete new refresh ->
+        // Assert final persistent DataStore cache belongs to newest generation, not held older write.
+        let releaseOldSetMany;
+        const oldSetManyGate = new Promise(resolve => {
+            releaseOldSetMany = resolve;
+        });
+        let notifyOldSetManyEntered;
+        const oldSetManyEntered = new Promise(resolve => {
+            notifyOldSetManyEntered = resolve;
+        });
+        let holdNextSetMany = true;
+        let fetchGenerationTag = "gen-old";
+        const origFetchForPersistRace = globalThis.fetch;
+
+        harness.beforeSetMany = async () => {
+            if (holdNextSetMany) {
+                holdNextSetMany = false;
+                notifyOldSetManyEntered();
+                await oldSetManyGate;
+            }
+        };
+        globalThis.fetch = async url => {
+            const tag = fetchGenerationTag;
+            return {
+                ok: true,
+                status: 200,
+                json: async () =>
+                    (String(url).includes("complex")
+                        ? complexJson
+                        : { ...arJson, byText: { ...arJson.byText, __PERSIST_TAG__: tag } }),
+            };
+        };
+
+        try {
+            plugin.start();
+            await new Promise(r => setTimeout(r, 15));
+
+            refreshAction(); // Gen N fetches "gen-old" and blocks inside DataStore.setMany
+            await oldSetManyEntered;
+
+            plugin.stop();
+            fetchGenerationTag = "gen-new";
+            plugin.start();
+            refreshAction(); // Gen N+1 fetches "gen-new" and queues write behind held Gen N write
+            await new Promise(r => setTimeout(r, 25));
+
+            releaseOldSetMany(); // Complete old Gen N setMany first, then Gen N+1 queued write completes
+            await new Promise(r => setTimeout(r, 40));
+
+            assert.equal(harness.store.get("ArabicDiscord_ar_v1")?.byText?.__PERSIST_TAG__, "gen-new");
+            plugin.stop();
+        } finally {
+            harness.beforeSetMany = null;
+            globalThis.fetch = origFetchForPersistRace;
         }
 
         // 3. Stress test: 10 consecutive start/stop cycles + Discord locale changes leave zero leaks

@@ -45,6 +45,26 @@ let complexArMap = new Map<string, unknown[]>();
 let isCheckingRemoteUpdates = false;
 let lifecycleGeneration = 0;
 let activeFetchController: AbortController | null = null;
+let storageWriteChain: Promise<void> = Promise.resolve();
+
+function persistDictionariesQueued(
+    gen: number,
+    entries: [string, unknown][],
+): Promise<boolean> {
+    let wrote = false;
+    const task = storageWriteChain.then(async () => {
+        if (!active || gen !== lifecycleGeneration) {
+            return;
+        }
+        await DataStore.setMany(entries);
+        wrote = true;
+    });
+    storageWriteChain = task.then(
+        () => undefined,
+        () => undefined,
+    );
+    return task.then(() => wrote);
+}
 const seenUntranslated = new Set<string>();
 const HAS_LATIN_RE = /[A-Za-z]/;
 const HAS_DIGIT_RE = /\d/;
@@ -1424,12 +1444,12 @@ async function refreshRemoteTranslations(manual: boolean): Promise<boolean> {
         const complexCount = Object.keys(complexJson).length;
 
         const meta: TranslationMeta = { updatedAt: Date.now(), arCount, complexCount };
-        await DataStore.setMany([
+        const wrote = await persistDictionariesQueued(gen, [
             [DS_AR_KEY, arJson],
             [DS_COMPLEX_KEY, complexJson],
             [DS_META_KEY, meta],
         ]);
-        if (!active || gen !== lifecycleGeneration) return false;
+        if (!wrote || !active || gen !== lifecycleGeneration) return false;
         applyLoadedDictionaries(arJson, complexJson, true);
         logger.info(`Loaded remote Arabic dictionaries (${arCount} simple, ${complexCount} complex).`);
 
@@ -1465,6 +1485,9 @@ async function refreshRemoteTranslations(manual: boolean): Promise<boolean> {
 async function initDictionaries() {
     const gen = lifecycleGeneration;
     try {
+        await storageWriteChain;
+        if (!active || gen !== lifecycleGeneration) return;
+
         const [cachedAr, cachedComplex, meta] = (await DataStore.getMany([
             DS_AR_KEY,
             DS_COMPLEX_KEY,

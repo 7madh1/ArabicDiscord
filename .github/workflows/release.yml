@@ -1,0 +1,75 @@
+name: Release ArabicDiscord
+
+on:
+    push:
+        tags:
+            - "v*"
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: "Release tag (e.g. v1.0.0)"
+                required: true
+                default: "v1.0.0"
+
+permissions:
+    contents: write
+
+jobs:
+    release:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout ArabicDiscord
+              uses: actions/checkout@v4
+              with:
+                  path: arabicDiscord
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+
+            - name: Validate plugin dictionaries and AST
+              working-directory: arabicDiscord
+              run: node scripts/validate.mjs
+
+            - name: Checkout Vencord for bundle verification
+              uses: actions/checkout@v4
+              with:
+                  repository: Vendicated/Vencord
+                  path: vencord
+
+            - name: Copy ArabicDiscord into Vencord userplugins
+              run: |
+                  mkdir -p vencord/src/userplugins/arabicDiscord
+                  cp -a arabicDiscord/. vencord/src/userplugins/arabicDiscord/
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: "12.15.0"
+
+            - name: Install Vencord dependencies
+              working-directory: vencord
+              run: pnpm install --frozen-lockfile
+
+            - name: Build & verify BetterDiscord bundle + runtime tests
+              working-directory: vencord
+              run: |
+                  node src/userplugins/arabicDiscord/scripts/build-bd.mjs --check
+                  node --test src/userplugins/arabicDiscord/scripts/runtime.test.mjs
+
+            - name: Resolve release tag
+              id: meta
+              run: |
+                  TAG="${{ github.event.inputs.tag || github.ref_name }}"
+                  echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+            - name: Create GitHub Release with Installer & BetterDiscord Plugin
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: ${{ steps.meta.outputs.tag }}
+                  name: "ArabicDiscord ${{ steps.meta.outputs.tag }}"
+                  generate_release_notes: true
+                  files: |
+                      arabicDiscord/Install-ArabicDiscord.bat
+                      arabicDiscord/betterdiscord/ArabicDiscord.plugin.js

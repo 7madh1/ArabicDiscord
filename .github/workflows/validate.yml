@@ -63,7 +63,7 @@ jobs:
 
             - name: Check formatting
               working-directory: vencord
-              run: pnpm exec oxfmt --check src/userplugins/arabicDiscord/styles.css src/userplugins/arabicDiscord/ar.json src/userplugins/arabicDiscord/complex_ar.json src/userplugins/arabicDiscord/.github/workflows/validate.yml src/userplugins/arabicDiscord/.github/workflows/discord-sync-check.yml
+              run: pnpm exec oxfmt --check src/userplugins/arabicDiscord/styles.css src/userplugins/arabicDiscord/ar.json src/userplugins/arabicDiscord/complex_ar.json src/userplugins/arabicDiscord/.github/workflows/validate.yml src/userplugins/arabicDiscord/.github/workflows/discord-sync-check.yml src/userplugins/arabicDiscord/.github/workflows/release.yml
 
             - name: Lint plugin & scripts
               working-directory: vencord

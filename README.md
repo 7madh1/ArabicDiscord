@@ -17,7 +17,17 @@
 
 ---
 
-## التثبيت كـ Vencord Userplugin
+## التثبيت التلقائي السريع (Windows - Vencord أو BetterDiscord)
+
+1. نزّل ملف [`Install-ArabicDiscord.bat`](./Install-ArabicDiscord.bat) من صفحة [**Releases**](https://github.com/7madh1/ArabicDiscord/releases) (أو مباشرة من المستودع).
+2. شغّل الملف واختر من القائمة:
+   - **`[1] BetterDiscord`**: يثبّت ملف [`ArabicDiscord.plugin.js`](./betterdiscord/ArabicDiscord.plugin.js) ويفعّله تلقائيًا (ويعرض تنزيل مثبّت BetterDiscord لو غير موجود).
+   - **`[2] Vencord`**: يتحقق من المتطلبات ويستنسخ Vencord + ArabicDiscord ويبنيهم ويفتح أداة الحقن `pnpm.cmd inject`.
+   - **`[3] Update`**: يحدّث النسخة المثبتة تلقائيًا.
+
+---
+
+## التثبيت اليدوي كـ Vencord Userplugin
 
 1. تأكد أن لديك نسخة مبنية من مصدر [Vencord](https://docs.vencord.dev/installing/custom-plugins/).
 2. انسخ هذا المجلد داخل مجلد `src/userplugins/arabicDiscord` في Vencord:

@@ -6,6 +6,7 @@
 
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -618,5 +619,244 @@ test("Plugin lifecycle: 10x start/stop stress, locale switch, in-flight stop rac
         }
         restoreGlobals();
         if (fs.existsSync(tmpOut)) fs.unlinkSync(tmpOut);
+    }
+});
+
+test("BetterDiscord ArabicDiscord.plugin.js runs start/settings/sync/stop cleanly with BdApi", async t => {
+    const bdPluginPath = path.join(pluginDir, "ArabicDiscord.plugin.js");
+    if (!fs.existsSync(bdPluginPath)) {
+        t.skip("ArabicDiscord.plugin.js not built yet");
+        return;
+    }
+
+    const restoreGlobals = captureGlobals([
+        "BdApi",
+        "window",
+        "DiscordNative",
+        "MutationObserver",
+        "document",
+        "fetch",
+        "setTimeout",
+        "clearTimeout",
+        "Node",
+    ]);
+
+    const bdData = new Map();
+    const bdStyles = new Map();
+    const bdToasts = [];
+    let bdNetFetches = 0;
+    const rootAttrs = new Map();
+    const rootStyle = new Map();
+    let currentMomentLocale = "en";
+    let currentIntlLocale = "en-US";
+    const fluxHandlers = new Map();
+
+    const makeMockEl = tag => {
+        const listeners = new Map();
+        return {
+            tagName: tag,
+            children: [],
+            style: {},
+            dir: "",
+            type: "",
+            className: "",
+            textContent: "",
+            appendChild(child) {
+                this.children.push(child);
+                return child;
+            },
+            addEventListener(ev, fn) {
+                listeners.set(ev, fn);
+            },
+            click() {
+                listeners.get("click")?.();
+            },
+        };
+    };
+
+    const discordUtils = {
+        createDateFormatter(locale) {
+            return () => `native:${locale}`;
+        },
+    };
+    const origDateFormatter = discordUtils.createDateFormatter;
+
+    const intlProto = {
+        withFormatters: () => intlObj,
+    };
+    const intlObj = Object.assign(Object.create(intlProto), {
+        currentLocale: "en-US",
+        setLocale(next) {
+            currentIntlLocale = next;
+            this.currentLocale = next;
+        },
+        formatToPlainString: m => String(m),
+        formatToParts: m => [String(m)],
+        format: m => String(m),
+    });
+
+    const fluxDispatcher = {
+        dispatch() {},
+        subscribe(ev, fn) {
+            if (!fluxHandlers.has(ev)) fluxHandlers.set(ev, new Set());
+            fluxHandlers.get(ev).add(fn);
+        },
+        unsubscribe(ev, fn) {
+            fluxHandlers.get(ev)?.delete(fn);
+        },
+    };
+
+    const momentMod = {
+        parseTwoDigitYear: () => 2026,
+        defineLocale() {},
+        locale(next) {
+            if (next !== undefined) currentMomentLocale = next;
+            return currentMomentLocale;
+        },
+    };
+
+    const localeStore = {
+        getName: () => "LocaleStore",
+        emitChange() {},
+    };
+
+    let lastPanelOnChange = null;
+    let pluginInstance = null;
+
+    try {
+        globalThis.window = globalThis;
+        globalThis.setTimeout = setTimeout;
+        globalThis.clearTimeout = clearTimeout;
+        globalThis.Node = class MockNode {};
+        globalThis.MutationObserver = class {
+            observe() {}
+            disconnect() {}
+        };
+        globalThis.DiscordNative = {
+            nativeModules: {
+                requireModule: name => (name === "discord_utils" ? discordUtils : undefined),
+            },
+        };
+        globalThis.document = {
+            readyState: "complete",
+            createElement: tag => makeMockEl(tag),
+            documentElement: {
+                setAttribute(k, v) {
+                    rootAttrs.set(k, String(v));
+                },
+                getAttribute(k) {
+                    return rootAttrs.get(k) ?? null;
+                },
+                removeAttribute(k) {
+                    rootAttrs.delete(k);
+                },
+                style: {
+                    setProperty(k, v) {
+                        rootStyle.set(k, String(v));
+                    },
+                    removeProperty(k) {
+                        rootStyle.delete(k);
+                    },
+                },
+            },
+            head: null,
+            body: null,
+            getElementById: () => null,
+            querySelectorAll: () => [],
+        };
+
+        globalThis.BdApi = {
+            Data: {
+                load: (p, k) => bdData.get(`${p}:${k}`),
+                save: (p, k, v) => {
+                    bdData.set(`${p}:${k}`, v);
+                },
+            },
+            DOM: {
+                addStyle: (id, css) => bdStyles.set(id, css),
+                removeStyle: id => bdStyles.delete(id),
+            },
+            Net: {
+                fetch: async url => {
+                    bdNetFetches++;
+                    return {
+                        ok: true,
+                        status: 200,
+                        json: async () => (String(url).includes("complex") ? complexJson : arJson),
+                    };
+                },
+            },
+            Webpack: {
+                Filters: {
+                    byKeys: (...keys) => mod => Boolean(mod) && keys.every(k => k in mod),
+                },
+                getByKeys: (...keys) => {
+                    if (keys.includes("dispatch")) return fluxDispatcher;
+                    if (keys.includes("parseTwoDigitYear")) return momentMod;
+                    return undefined;
+                },
+                getStore: name => (name === "LocaleStore" ? localeStore : undefined),
+                getModule: filter => [fluxDispatcher, momentMod, localeStore, intlObj].find(filter),
+                waitForModule: () => Promise.resolve(undefined),
+            },
+            UI: {
+                showToast: (text, opts) => bdToasts.push({ text, opts }),
+                buildSettingsPanel: ({ onChange }) => {
+                    lastPanelOnChange = onChange;
+                    return new globalThis.Node();
+                },
+            },
+            Logger: { info() {}, warn() {}, error() {} },
+            React: {
+                Fragment: "Fragment",
+                createElement: (type, props, ...children) => ({
+                    type,
+                    props: props || {},
+                    children,
+                }),
+            },
+        };
+
+        const require = createRequire(import.meta.url);
+        delete require.cache[bdPluginPath];
+        const BdArabicDiscord = require(bdPluginPath);
+        assert.equal(typeof BdArabicDiscord, "function");
+
+        pluginInstance = new BdArabicDiscord();
+        pluginInstance.start();
+        await new Promise(r => setTimeout(r, 60));
+
+        assert.ok(bdStyles.get("ArabicDiscord-styles")?.includes("data-arabic-rtl"));
+        assert.equal(currentMomentLocale, "ar-discord");
+        assert.equal(currentIntlLocale, "ar-u-nu-latn");
+        assert.notEqual(discordUtils.createDateFormatter, origDateFormatter);
+        assert.ok(bdNetFetches >= 2);
+
+        const panel = pluginInstance.getSettingsPanel();
+        assert.equal(typeof lastPanelOnChange, "function");
+        lastPanelOnChange(null, "enableRtl", true);
+        assert.equal(rootAttrs.get("data-arabic-rtl"), "1");
+        assert.equal(rootAttrs.get("dir"), "rtl");
+        assert.equal(bdData.get("ArabicDiscord:settings")?.enableRtl, true);
+
+        const updateBtn = panel.children.at(-1)?.children?.[0];
+        const beforeClicks = bdNetFetches;
+        updateBtn?.click();
+        await new Promise(r => setTimeout(r, 40));
+        assert.ok(bdNetFetches >= beforeClicks + 2);
+
+        pluginInstance.stop();
+        assert.equal(bdStyles.has("ArabicDiscord-styles"), false);
+        assert.equal(rootAttrs.has("data-arabic-rtl"), false);
+        assert.equal(discordUtils.createDateFormatter, origDateFormatter);
+        assert.equal(currentMomentLocale, "en");
+        assert.equal(currentIntlLocale, "en-US");
+    } finally {
+        try {
+            pluginInstance?.stop?.();
+        } catch {
+            // Ignore cleanup errors if test failed mid-setup
+        }
+        restoreGlobals();
     }
 });

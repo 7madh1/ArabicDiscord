@@ -67,7 +67,11 @@ jobs:
 
             - name: Lint plugin & scripts
               working-directory: vencord
-              run: pnpm exec oxlint src/userplugins/arabicDiscord/index.tsx src/userplugins/arabicDiscord/validation.mjs src/userplugins/arabicDiscord/scripts/validate.mjs src/userplugins/arabicDiscord/scripts/runtime.test.mjs
+              run: pnpm exec oxlint src/userplugins/arabicDiscord/index.tsx src/userplugins/arabicDiscord/validation.mjs src/userplugins/arabicDiscord/bd/shims.mjs src/userplugins/arabicDiscord/bd/fetch-shim.mjs src/userplugins/arabicDiscord/bd/entry.mjs src/userplugins/arabicDiscord/scripts/build-bd.mjs src/userplugins/arabicDiscord/scripts/validate.mjs src/userplugins/arabicDiscord/scripts/runtime.test.mjs
+
+            - name: Verify BetterDiscord plugin bundle is up to date
+              working-directory: vencord
+              run: node src/userplugins/arabicDiscord/scripts/build-bd.mjs --check
 
             - name: Run runtime lifecycle & AST tests
               working-directory: vencord

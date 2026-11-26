@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 set "SCRIPT_PATH=%~f0"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$code = [System.IO.File]::ReadAllText($env:SCRIPT_PATH, [System.Text.Encoding]::UTF8); $idx = $code.IndexOf('#__PS_START__'); if ($idx -lt 0) { Write-Error 'Installer payload missing.'; exit 1 }; & ([scriptblock]::Create($code.Substring($idx)))"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$code = [System.IO.File]::ReadAllText($env:SCRIPT_PATH, [System.Text.Encoding]::UTF8); $marker = '#' + '__PS_START__'; $idx = $code.IndexOf($marker); if ($idx -lt 0) { Write-Error 'Installer payload missing.'; exit 1 }; & ([scriptblock]::Create($code.Substring($idx)))"
 exit /b %ERRORLEVEL%
 #__PS_START__
 $ErrorActionPreference = "Stop"
@@ -14,7 +14,7 @@ $BdInstallerUrl = "https://github.com/BetterDiscord/Installer/releases/latest/do
 function Write-Header {
     Clear-Host
     Write-Host "==========================================================" -ForegroundColor Cyan
-    Write-Host "        ArabicDiscord Installer (Vencord & BetterDiscord) " -ForegroundColor Cyan
+    Write-Host "    ArabicDiscord v0.1.0 Installer (Vencord & BetterDiscord)" -ForegroundColor Cyan
     Write-Host "==========================================================" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -190,6 +190,7 @@ function Install-ForVencord {
     $inputDir = Read-Host "Vencord folder path [Press Enter for $defaultDir]"
     $vencordDir = if ([string]::IsNullOrWhiteSpace($inputDir)) { $defaultDir } else { $inputDir.Trim().Trim('"') }
 
+    $ErrorActionPreference = "Continue"
     if (-not (Test-Path (Join-Path $vencordDir ".git"))) {
         Write-Host "[*] Cloning Vencord into $vencordDir..." -ForegroundColor Cyan
         & git clone $VencordRepoUrl $vencordDir
@@ -216,6 +217,7 @@ function Install-ForVencord {
         Write-Host "[*] Updating ArabicDiscord plugin..." -ForegroundColor Cyan
         & git -C $pluginDir pull --ff-only
     }
+    $ErrorActionPreference = "Stop"
 
     if (-not (Test-Path (Join-Path $pluginDir "index.tsx"))) {
         throw "Invalid plugin layout: index.tsx missing in $pluginDir"

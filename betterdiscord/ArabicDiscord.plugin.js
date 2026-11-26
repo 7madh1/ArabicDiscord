@@ -2,7 +2,7 @@
  * @name ArabicDiscord
  * @author 7madh
  * @description Full Arabic localization for Discord with Arabic fonts and RTL layout support
- * @version 1.0.0
+ * @version 0.1.0
  * @source https://github.com/7madh1/ArabicDiscord
  * @updateUrl https://raw.githubusercontent.com/7madh1/ArabicDiscord/main/betterdiscord/ArabicDiscord.plugin.js
  */

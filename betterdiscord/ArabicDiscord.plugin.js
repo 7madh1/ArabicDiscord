@@ -1374,7 +1374,11 @@ function lookupString(raw, lookups) {
   const direct = lookups.byTextMap.get(raw);
   if (direct) return direct;
   const cached = lookupCache.get(raw);
-  if (cached !== void 0) return cached ?? void 0;
+  if (cached !== void 0) {
+    lookupCache.delete(raw);
+    lookupCache.set(raw, cached);
+    return cached ?? void 0;
+  }
   const norm = normalizeText(raw);
   if (norm !== raw) {
     const exactNorm = lookups.byTextMap.get(norm);
@@ -1530,6 +1534,7 @@ var SKIP_SUBTREE_SELECTORS = [
   "[class*='accountPopoutButtonWrapper_'] [class*='customStatus_']",
   "[class*='role_']"
 ];
+var SKIP_SUBTREE_SELECTOR = SKIP_SUBTREE_SELECTORS.join(",");
 var SKIP_EDITOR_SELECTOR = "[contenteditable='true'],[class*='slateTextArea_']";
 var PLACEHOLDER_SELECTOR = "[class*='placeholder_'],.public-DraftEditorPlaceholder-inner";
 var AUTO_DIR_SELECTOR = [
@@ -1658,7 +1663,7 @@ function translateDomNode(node, lookups) {
         acceptNode(n) {
           if (n.nodeType === Node.ELEMENT_NODE) {
             const elem = n;
-            if (elem.matches(SKIP_DOM_SELECTOR) && !elem.matches(PLACEHOLDER_SELECTOR)) {
+            if (elem.matches(SKIP_SUBTREE_SELECTOR) && !elem.matches(PLACEHOLDER_SELECTOR)) {
               return NodeFilter.FILTER_REJECT;
             }
             return NodeFilter.FILTER_SKIP;
@@ -1669,7 +1674,7 @@ function translateDomNode(node, lookups) {
     );
     let current;
     while (current = walker.nextNode()) {
-      applyTextNodeTranslation(current, lookups, false);
+      applyTextNodeTranslation(current, lookups, true);
     }
   }
 }

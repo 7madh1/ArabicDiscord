@@ -99,11 +99,11 @@ function Install-ForBetterDiscord {
     Write-Host ""
 
     if (Test-VencordInjected) {
-        Write-Host "[!] Vencord appears to be injected into Discord right now." -ForegroundColor Yellow
+        Write-Host "[!] Vencord is currently injected into Discord." -ForegroundColor Red
         Write-Host "    Vencord and BetterDiscord cannot run on the same Discord installation." -ForegroundColor Yellow
-        Write-Host "    Please uninject Vencord first (pnpm.cmd uninject) if you want BetterDiscord." -ForegroundColor Yellow
-        $cont = Read-Host "Continue anyway? (y/N)"
-        if ($cont -notmatch "^[yY]") { return }
+        Write-Host "    Uninject Vencord first (pnpm.cmd uninject or Vencord Installer -> Uninstall)," -ForegroundColor Yellow
+        Write-Host "    then run this option again." -ForegroundColor Yellow
+        return
     }
 
     $bdRoot = Join-Path $env:APPDATA "BetterDiscord"
@@ -184,10 +184,10 @@ function Install-ForVencord {
     Write-Host ""
 
     if (Test-BetterDiscordInjected) {
-        Write-Host "[!] BetterDiscord is currently injected into Discord." -ForegroundColor Yellow
-        Write-Host "    Uninstall BetterDiscord first via BetterDiscord Installer before injecting Vencord." -ForegroundColor Yellow
-        $cont = Read-Host "Continue anyway? (y/N)"
-        if ($cont -notmatch "^[yY]") { return }
+        Write-Host "[!] BetterDiscord is currently injected into Discord." -ForegroundColor Red
+        Write-Host "    BetterDiscord and Vencord cannot run on the same Discord installation." -ForegroundColor Yellow
+        Write-Host "    Uninstall BetterDiscord first via BetterDiscord Installer, then try again." -ForegroundColor Yellow
+        return
     }
 
     if (-not (Ensure-Command -Cmd "git" -Label "Git" -WingetId "Git.Git" -HelpUrl "https://git-scm.com/downloads")) { return }
@@ -206,6 +206,7 @@ function Install-ForVencord {
     } else {
         Write-Host "[*] Updating existing Vencord repository..." -ForegroundColor Cyan
         & git -C $vencordDir pull --ff-only
+        if ($LASTEXITCODE -ne 0) { throw "Failed to update existing Vencord repository." }
     }
 
     $userPluginsDir = Join-Path $vencordDir "src\userplugins"
@@ -216,7 +217,17 @@ function Install-ForVencord {
     $pluginDir = Join-Path $userPluginsDir "arabicDiscord"
     if (-not (Test-Path (Join-Path $pluginDir ".git"))) {
         if (Test-Path $pluginDir) {
-            Remove-Item -Recurse -Force $pluginDir
+            $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+            $backupDir = Join-Path $vencordDir "arabicDiscord.backup-$timestamp"
+            Write-Host "[!] Found existing non-git folder at: $pluginDir" -ForegroundColor Yellow
+            $confirmMove = Read-Host "Move existing folder to backup ($backupDir) and clone fresh? (Y/n)"
+            if ($confirmMove -match "^[nN]") {
+                $ErrorActionPreference = "Stop"
+                Write-Host "[*] Cancelled without modifying your files." -ForegroundColor Yellow
+                return
+            }
+            Move-Item -Path $pluginDir -Destination $backupDir
+            Write-Host "[*] Backed up existing folder to: $backupDir" -ForegroundColor Green
         }
         Write-Host "[*] Cloning ArabicDiscord plugin..." -ForegroundColor Cyan
         & git clone $RepoUrl $pluginDir
@@ -224,6 +235,7 @@ function Install-ForVencord {
     } else {
         Write-Host "[*] Updating ArabicDiscord plugin..." -ForegroundColor Cyan
         & git -C $pluginDir pull --ff-only
+        if ($LASTEXITCODE -ne 0) { throw "Failed to update ArabicDiscord plugin." }
     }
     $ErrorActionPreference = "Stop"
 
@@ -286,12 +298,16 @@ function Update-ArabicDiscord {
         $pDir = Join-Path $dir "src\userplugins\arabicDiscord"
         if (Test-Path (Join-Path $pDir ".git")) {
             Write-Host "[*] Updating Vencord plugin in $dir..." -ForegroundColor Cyan
+            $ErrorActionPreference = "Continue"
             & git -C $pDir pull --ff-only
+            if ($LASTEXITCODE -ne 0) { throw "Failed to pull updates in $pDir (exit $LASTEXITCODE)." }
             Push-Location $dir
             try {
                 & pnpm.cmd build
+                if ($LASTEXITCODE -ne 0) { throw "Vencord build failed in $dir (exit $LASTEXITCODE)." }
             } finally {
                 Pop-Location
+                $ErrorActionPreference = "Stop"
             }
             Write-Host "[OK] Rebuilt Vencord + ArabicDiscord in $dir" -ForegroundColor Green
             $updatedAny = $true

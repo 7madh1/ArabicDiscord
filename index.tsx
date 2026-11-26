@@ -945,7 +945,11 @@ function lookupString(raw: string, lookups: LookupMaps): string | undefined {
     if (direct) return direct;
 
     const cached = lookupCache.get(raw);
-    if (cached !== undefined) return cached ?? undefined;
+    if (cached !== undefined) {
+        lookupCache.delete(raw);
+        lookupCache.set(raw, cached);
+        return cached ?? undefined;
+    }
 
     const norm = normalizeText(raw);
     if (norm !== raw) {
@@ -1126,6 +1130,7 @@ const SKIP_SUBTREE_SELECTORS = [
     "[class*='role_']",
 ];
 
+const SKIP_SUBTREE_SELECTOR = SKIP_SUBTREE_SELECTORS.join(",");
 const SKIP_EDITOR_SELECTOR = "[contenteditable='true'],[class*='slateTextArea_']";
 const PLACEHOLDER_SELECTOR = "[class*='placeholder_'],.public-DraftEditorPlaceholder-inner";
 const AUTO_DIR_SELECTOR = [
@@ -1273,7 +1278,7 @@ function translateDomNode(node: Node, lookups: LookupMaps) {
                     if (n.nodeType === Node.ELEMENT_NODE) {
                         const elem = n as Element;
                         if (
-                            elem.matches(SKIP_DOM_SELECTOR) &&
+                            elem.matches(SKIP_SUBTREE_SELECTOR) &&
                             !elem.matches(PLACEHOLDER_SELECTOR)
                         ) {
                             return NodeFilter.FILTER_REJECT;
@@ -1287,7 +1292,7 @@ function translateDomNode(node: Node, lookups: LookupMaps) {
 
         let current: Node | null;
         while ((current = walker.nextNode())) {
-            applyTextNodeTranslation(current as Text, lookups, false);
+            applyTextNodeTranslation(current as Text, lookups, true);
         }
     }
 }

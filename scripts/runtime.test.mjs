@@ -892,3 +892,307 @@ test("BetterDiscord ArabicDiscord.plugin.js runs start/settings/sync/stop cleanl
         restoreGlobals();
     }
 });
+
+test("DOM translation regression: UI/placeholders translate while code, messages, usernames, and editors stay intact", async () => {
+    const restoreGlobals = captureGlobals([
+        "BdApi",
+        "window",
+        "DiscordNative",
+        "MutationObserver",
+        "document",
+        "fetch",
+        "setTimeout",
+        "clearTimeout",
+        "Node",
+        "NodeFilter",
+        "HTMLInputElement",
+        "HTMLTextAreaElement",
+    ]);
+
+    const bdPluginPath = path.join(pluginDir, "betterdiscord", "ArabicDiscord.plugin.js");
+    const bdData = new Map();
+
+    function matchSingleSelector(el, sel) {
+        const s = sel.trim();
+        if (!s) return false;
+        if (s.includes(" ")) {
+            const parts = s.split(/\s+/);
+            const last = parts[parts.length - 1];
+            if (!matchSingleSelector(el, last)) return false;
+            let cur = el.parentElement;
+            for (let i = parts.length - 2; i >= 0; i--) {
+                while (cur && !matchSingleSelector(cur, parts[i])) {
+                    cur = cur.parentElement;
+                }
+                if (!cur) return false;
+                cur = cur.parentElement;
+            }
+            return true;
+        }
+        const classContains = s.match(/^\[class\*=['"]([^'"]+)['"]\]$/);
+        if (classContains) return (el.className || "").includes(classContains[1]);
+        const attrEq = s.match(/^\[([a-zA-Z0-9_-]+)=['"]([^'"]+)['"]\]$/);
+        if (attrEq) return el.getAttribute(attrEq[1]) === attrEq[2];
+        const attrHas = s.match(/^\[([a-zA-Z0-9_-]+)\]$/);
+        if (attrHas) return el.hasAttribute(attrHas[1]);
+        if (s.startsWith(".")) return (el.className || "").split(/\s+/).includes(s.slice(1));
+        return (el.tagName || "").toLowerCase() === s.toLowerCase();
+    }
+
+    function matchSelectorList(el, list) {
+        return list.split(",").some(part => matchSingleSelector(el, part));
+    }
+
+    class MockNode {
+        constructor(nodeType) {
+            this.nodeType = nodeType;
+            this.parentElement = null;
+            this.parentNode = null;
+            this.nextSibling = null;
+            this.isConnected = true;
+        }
+    }
+
+    class MockText extends MockNode {
+        constructor(value) {
+            super(3);
+            this.nodeValue = value;
+        }
+    }
+
+    class MockElement extends MockNode {
+        constructor(tagName, attrs = {}) {
+            super(1);
+            this.tagName = tagName;
+            this.attrs = new Map(Object.entries(attrs));
+            this.className = attrs.class || "";
+            this.children = [];
+            this.style = { setProperty() {}, removeProperty() {} };
+        }
+        get firstChild() {
+            return this.children[0] ?? null;
+        }
+        get firstElementChild() {
+            return this.children.find(c => c.nodeType === 1) ?? null;
+        }
+        appendChild(child) {
+            const prev = this.children[this.children.length - 1];
+            if (prev) prev.nextSibling = child;
+            child.parentNode = this;
+            child.parentElement = this;
+            this.children.push(child);
+            return child;
+        }
+        setAttribute(k, v) {
+            this.attrs.set(k, String(v));
+        }
+        getAttribute(k) {
+            return this.attrs.get(k) ?? null;
+        }
+        hasAttribute(k) {
+            return this.attrs.has(k);
+        }
+        removeAttribute(k) {
+            this.attrs.delete(k);
+        }
+        matches(sel) {
+            return matchSelectorList(this, sel);
+        }
+        closest(sel) {
+            let cur = this;
+            while (cur) {
+                if (cur.matches(sel)) return cur;
+                cur = cur.parentElement;
+            }
+            return null;
+        }
+        getElementsByTagName(tag) {
+            const out = [];
+            const walk = node => {
+                for (const c of node.children || []) {
+                    if (c.nodeType === 1) {
+                        if (c.tagName.toLowerCase() === tag.toLowerCase()) out.push(c);
+                        walk(c);
+                    }
+                }
+            };
+            walk(this);
+            return out;
+        }
+        querySelectorAll(sel) {
+            const out = [];
+            const walk = node => {
+                for (const c of node.children || []) {
+                    if (c.nodeType === 1) {
+                        if (c.matches(sel)) out.push(c);
+                        walk(c);
+                    }
+                }
+            };
+            walk(this);
+            return out;
+        }
+    }
+
+    class MockInputElement extends MockElement {
+        constructor(attrs = {}) {
+            super("input", attrs);
+            this.placeholder = attrs.placeholder || "";
+        }
+    }
+
+    class MockTextAreaElement extends MockElement {
+        constructor(attrs = {}) {
+            super("textarea", attrs);
+            this.placeholder = attrs.placeholder || "";
+        }
+    }
+
+    let pluginInstance = null;
+    try {
+        globalThis.window = globalThis;
+        globalThis.setTimeout = setTimeout;
+        globalThis.clearTimeout = clearTimeout;
+        globalThis.Node = Object.assign(MockNode, { ELEMENT_NODE: 1, TEXT_NODE: 3 });
+        globalThis.NodeFilter = {
+            SHOW_ELEMENT: 1,
+            SHOW_TEXT: 4,
+            FILTER_ACCEPT: 1,
+            FILTER_REJECT: 2,
+            FILTER_SKIP: 3,
+        };
+        globalThis.HTMLInputElement = MockInputElement;
+        globalThis.HTMLTextAreaElement = MockTextAreaElement;
+        globalThis.MutationObserver = class {
+            observe() {}
+            disconnect() {}
+        };
+        globalThis.DiscordNative = { nativeModules: { requireModule: () => undefined } };
+
+        const docEl = new MockElement("html");
+        const body = new MockElement("body");
+
+        // 1. Regular UI label + link (must translate)
+        const uiBtn = new MockElement("button");
+        const uiText = new MockText("Settings");
+        uiBtn.appendChild(uiText);
+        const linkEl = new MockElement("a");
+        const linkText = new MockText("Learn more");
+        linkEl.appendChild(linkText);
+        uiBtn.appendChild(linkEl);
+        body.appendChild(uiBtn);
+
+        // 2. <input> placeholder (must translate)
+        const searchInput = new MockInputElement({ placeholder: "Search" });
+        body.appendChild(searchInput);
+
+        // 3. Slate editor: placeholder translates, editable typed text MUST NOT
+        const slateWrap = new MockElement("div", {
+            class: "slateTextArea_abc",
+            contenteditable: "true",
+        });
+        const slatePh = new MockElement("div", { class: "placeholder_xyz" });
+        const slatePhText = new MockText("Message #general");
+        slatePh.appendChild(slatePhText);
+        const slateTyped = new MockElement("span");
+        const slateTypedText = new MockText("Settings");
+        slateTyped.appendChild(slateTypedText);
+        slateWrap.appendChild(slatePh);
+        slateWrap.appendChild(slateTyped);
+        body.appendChild(slateWrap);
+
+        // 4. Message content + <code> + <pre> + username (MUST NOT translate)
+        const msgBox = new MockElement("div", { class: "markup_msg" });
+        const msgText = new MockText("Settings");
+        const codeEl = new MockElement("code");
+        const codeText = new MockText("Settings");
+        codeEl.appendChild(codeText);
+        msgBox.appendChild(msgText);
+        msgBox.appendChild(codeEl);
+        body.appendChild(msgBox);
+
+        const preEl = new MockElement("pre");
+        const preText = new MockText("Settings");
+        preEl.appendChild(preText);
+        body.appendChild(preEl);
+
+        const userEl = new MockElement("span", { class: "username_123" });
+        const userText = new MockText("Settings");
+        userEl.appendChild(userText);
+        body.appendChild(userEl);
+
+        globalThis.document = {
+            readyState: "complete",
+            documentElement: docEl,
+            head: null,
+            body,
+            getElementById: () => null,
+            querySelectorAll: sel => docEl.querySelectorAll(sel),
+            createTreeWalker(root, _what, filter) {
+                const flat = [];
+                const walk = node => {
+                    for (const child of node.children || []) {
+                        const res = filter.acceptNode(child);
+                        if (res === globalThis.NodeFilter.FILTER_REJECT) continue;
+                        if (res === globalThis.NodeFilter.FILTER_ACCEPT && child.nodeType === 3) {
+                            flat.push(child);
+                        }
+                        if (child.nodeType === 1) walk(child);
+                    }
+                };
+                walk(root);
+                let idx = 0;
+                return { nextNode: () => (idx < flat.length ? flat[idx++] : null) };
+            },
+        };
+
+        globalThis.BdApi = {
+            Data: {
+                load: (p, k) => bdData.get(`${p}:${k}`),
+                save: (p, k, v) => bdData.set(`${p}:${k}`, v),
+            },
+            DOM: { addStyle() {}, removeStyle() {} },
+            Net: {
+                fetch: async url => ({
+                    ok: true,
+                    status: 200,
+                    json: async () => (String(url).includes("complex") ? complexJson : arJson),
+                }),
+            },
+            Webpack: {
+                Filters: { byKeys: (...keys) => m => Boolean(m) && keys.every(k => k in m) },
+                getByKeys: () => undefined,
+                getStore: () => undefined,
+                getModule: () => undefined,
+                waitForModule: () => Promise.resolve(undefined),
+            },
+            UI: { showToast() {} },
+            Logger: { info() {}, warn() {}, error() {} },
+            React: { Fragment: "Fragment", createElement: () => null },
+        };
+
+        const require = createRequire(import.meta.url);
+        delete require.cache[bdPluginPath];
+        const BdArabicDiscord = require(bdPluginPath);
+        pluginInstance = new BdArabicDiscord();
+        pluginInstance.start();
+        await new Promise(r => setTimeout(r, 60));
+
+        assert.equal(uiText.nodeValue, arJson.byText.Settings);
+        assert.equal(linkText.nodeValue, arJson.byText["Learn more"]);
+        assert.equal(searchInput.placeholder, arJson.byText.Search);
+        assert.equal(slatePhText.nodeValue, "أرسل رسالة في #general");
+        assert.equal(slateTypedText.nodeValue, "Settings");
+        assert.equal(msgText.nodeValue, "Settings");
+        assert.equal(codeText.nodeValue, "Settings");
+        assert.equal(preText.nodeValue, "Settings");
+        assert.equal(userText.nodeValue, "Settings");
+    } finally {
+        try {
+            pluginInstance?.stop?.();
+        } catch {
+            // Ignore cleanup errors
+        }
+        restoreGlobals();
+    }
+});

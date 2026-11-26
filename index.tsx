@@ -70,7 +70,7 @@ const HAS_LATIN_RE = /[A-Za-z]/;
 const HAS_DIGIT_RE = /\d/;
 const NEEDS_NORM_RE = /[\u2018\u2019\u201C\u201D\n\r\t]|\s{2,}/;
 const FONT_LINK_ID = "vc-arabic-font-link";
-const LOOKUP_CACHE_LIMIT = 2048;
+const LOOKUP_CACHE_LIMIT = 4096;
 
 interface ArabicFontDef {
     id: string;
@@ -925,7 +925,10 @@ const CALENDAR_TIME_RE = /^(Today|Yesterday) at (\d{1,2}:\d{2})(?:\s*(AM|PM))?$/
 
 function cacheLookupResult(key: string, result: string | undefined): string | undefined {
     if (lookupCache.size >= LOOKUP_CACHE_LIMIT) {
-        lookupCache.clear();
+        const oldestKey = lookupCache.keys().next().value;
+        if (oldestKey !== undefined) {
+            lookupCache.delete(oldestKey);
+        }
     }
     lookupCache.set(key, result ?? null);
     return result;
@@ -1123,8 +1126,6 @@ const SKIP_SUBTREE_SELECTORS = [
     "[class*='role_']",
 ];
 
-const SKIP_SUBTREE_SELECTOR = SKIP_SUBTREE_SELECTORS.join(",");
-
 const SKIP_EDITOR_SELECTOR = "[contenteditable='true'],[class*='slateTextArea_']";
 const PLACEHOLDER_SELECTOR = "[class*='placeholder_'],.public-DraftEditorPlaceholder-inner";
 const AUTO_DIR_SELECTOR = [
@@ -1272,7 +1273,7 @@ function translateDomNode(node: Node, lookups: LookupMaps) {
                     if (n.nodeType === Node.ELEMENT_NODE) {
                         const elem = n as Element;
                         if (
-                            elem.matches(SKIP_SUBTREE_SELECTOR) &&
+                            elem.matches(SKIP_DOM_SELECTOR) &&
                             !elem.matches(PLACEHOLDER_SELECTOR)
                         ) {
                             return NodeFilter.FILTER_REJECT;
@@ -1286,7 +1287,7 @@ function translateDomNode(node: Node, lookups: LookupMaps) {
 
         let current: Node | null;
         while ((current = walker.nextNode())) {
-            applyTextNodeTranslation(current as Text, lookups, true);
+            applyTextNodeTranslation(current as Text, lookups, false);
         }
     }
 }

@@ -661,7 +661,7 @@ var HAS_LATIN_RE = /[A-Za-z]/;
 var HAS_DIGIT_RE = /\d/;
 var NEEDS_NORM_RE = /[\u2018\u2019\u201C\u201D\n\r\t]|\s{2,}/;
 var FONT_LINK_ID = "vc-arabic-font-link";
-var LOOKUP_CACHE_LIMIT = 2048;
+var LOOKUP_CACHE_LIMIT = 4096;
 var ARABIC_FONTS = [
   {
     id: "cairo",
@@ -1358,7 +1358,10 @@ var FULL_DATE_RE = /^(January|February|March|April|May|June|July|August|Septembe
 var CALENDAR_TIME_RE = /^(Today|Yesterday) at (\d{1,2}:\d{2})(?:\s*(AM|PM))?$/i;
 function cacheLookupResult(key, result) {
   if (lookupCache.size >= LOOKUP_CACHE_LIMIT) {
-    lookupCache.clear();
+    const oldestKey = lookupCache.keys().next().value;
+    if (oldestKey !== void 0) {
+      lookupCache.delete(oldestKey);
+    }
   }
   lookupCache.set(key, result ?? null);
   return result;
@@ -1527,7 +1530,6 @@ var SKIP_SUBTREE_SELECTORS = [
   "[class*='accountPopoutButtonWrapper_'] [class*='customStatus_']",
   "[class*='role_']"
 ];
-var SKIP_SUBTREE_SELECTOR = SKIP_SUBTREE_SELECTORS.join(",");
 var SKIP_EDITOR_SELECTOR = "[contenteditable='true'],[class*='slateTextArea_']";
 var PLACEHOLDER_SELECTOR = "[class*='placeholder_'],.public-DraftEditorPlaceholder-inner";
 var AUTO_DIR_SELECTOR = [
@@ -1656,7 +1658,7 @@ function translateDomNode(node, lookups) {
         acceptNode(n) {
           if (n.nodeType === Node.ELEMENT_NODE) {
             const elem = n;
-            if (elem.matches(SKIP_SUBTREE_SELECTOR) && !elem.matches(PLACEHOLDER_SELECTOR)) {
+            if (elem.matches(SKIP_DOM_SELECTOR) && !elem.matches(PLACEHOLDER_SELECTOR)) {
               return NodeFilter.FILTER_REJECT;
             }
             return NodeFilter.FILTER_SKIP;
@@ -1667,7 +1669,7 @@ function translateDomNode(node, lookups) {
     );
     let current;
     while (current = walker.nextNode()) {
-      applyTextNodeTranslation(current, lookups, true);
+      applyTextNodeTranslation(current, lookups, false);
     }
   }
 }

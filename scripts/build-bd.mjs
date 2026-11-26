@@ -94,7 +94,7 @@ const result = await esbuild.build({
                     namespace: "bd-css-text",
                 }));
                 build.onLoad({ filter: /.*/, namespace: "bd-css-text" }, args => ({
-                    contents: `export default ${JSON.stringify(fs.readFileSync(args.path, "utf8"))};`,
+                    contents: `export default ${JSON.stringify(fs.readFileSync(args.path, "utf8").replace(/\r\n/g, "\n"))};`,
                     loader: "js",
                 }));
                 for (const id of Object.keys(shimModules)) {

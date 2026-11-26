@@ -623,7 +623,7 @@ test("Plugin lifecycle: 10x start/stop stress, locale switch, in-flight stop rac
 });
 
 test("BetterDiscord ArabicDiscord.plugin.js runs start/settings/sync/stop cleanly with BdApi", async t => {
-    const bdPluginPath = path.join(pluginDir, "ArabicDiscord.plugin.js");
+    const bdPluginPath = path.join(pluginDir, "betterdiscord", "ArabicDiscord.plugin.js");
     if (!fs.existsSync(bdPluginPath)) {
         t.skip("ArabicDiscord.plugin.js not built yet");
         return;

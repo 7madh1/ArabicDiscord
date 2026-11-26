@@ -9,7 +9,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const pluginDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const outPath = path.join(pluginDir, "ArabicDiscord.plugin.js");
+const outPath = path.join(pluginDir, "betterdiscord", "ArabicDiscord.plugin.js");
 const isCheck = process.argv.includes("--check");
 
 const BD_META = `/**
@@ -18,7 +18,7 @@ const BD_META = `/**
  * @description Full Arabic localization for Discord with Arabic fonts and RTL layout support
  * @version 1.0.0
  * @source https://github.com/7madh1/ArabicDiscord
- * @updateUrl https://raw.githubusercontent.com/7madh1/ArabicDiscord/main/ArabicDiscord.plugin.js
+ * @updateUrl https://raw.githubusercontent.com/7madh1/ArabicDiscord/main/betterdiscord/ArabicDiscord.plugin.js
  */
 `;
 
@@ -47,9 +47,9 @@ function findIntlHashFile() {
 }
 
 const esbuild = await loadEsbuild();
-const shimsPath = path.join(pluginDir, "bd", "shims.mjs");
-const fetchShimPath = path.join(pluginDir, "bd", "fetch-shim.mjs");
-const entryPath = path.join(pluginDir, "bd", "entry.mjs");
+const shimsPath = path.join(pluginDir, "betterdiscord", "shims.mjs");
+const fetchShimPath = path.join(pluginDir, "betterdiscord", "fetch-shim.mjs");
+const entryPath = path.join(pluginDir, "betterdiscord", "entry.mjs");
 const cssPath = path.join(pluginDir, "styles.css");
 const intlHashPath = findIntlHashFile();
 

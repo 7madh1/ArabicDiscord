@@ -4,7 +4,7 @@
  * @description Full Arabic localization for Discord with Arabic fonts and RTL layout support
  * @version 1.0.0
  * @source https://github.com/7madh1/ArabicDiscord
- * @updateUrl https://raw.githubusercontent.com/7madh1/ArabicDiscord/main/ArabicDiscord.plugin.js
+ * @updateUrl https://raw.githubusercontent.com/7madh1/ArabicDiscord/main/betterdiscord/ArabicDiscord.plugin.js
  */
 "use strict";
 var __defProp = Object.defineProperty;
@@ -25,14 +25,14 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/userplugins/arabicDiscord/bd/entry.mjs
+// src/userplugins/arabicDiscord/betterdiscord/entry.mjs
 var entry_exports = {};
 __export(entry_exports, {
   default: () => ArabicDiscord
 });
 module.exports = __toCommonJS(entry_exports);
 
-// src/userplugins/arabicDiscord/bd/fetch-shim.mjs
+// src/userplugins/arabicDiscord/betterdiscord/fetch-shim.mjs
 async function fetch(input, init) {
   if (init?.signal?.aborted) {
     throw new DOMException("Aborted", "AbortError");
@@ -56,7 +56,7 @@ async function fetch(input, init) {
   return globalThis.fetch(input, init);
 }
 
-// src/userplugins/arabicDiscord/bd/shims.mjs
+// src/userplugins/arabicDiscord/betterdiscord/shims.mjs
 var DB_NAME = "ArabicDiscordDB";
 var STORE_NAME = "keyval";
 var PLUGIN_NAME = "ArabicDiscord";
@@ -2061,7 +2061,7 @@ var index_default = definePlugin({
   }
 });
 
-// src/userplugins/arabicDiscord/bd/entry.mjs
+// src/userplugins/arabicDiscord/betterdiscord/entry.mjs
 function findToolboxAction(node, id) {
   if (!node || typeof node !== "object") return null;
   if (node.props?.id === id && typeof node.props.action === "function") {

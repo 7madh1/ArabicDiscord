@@ -35,11 +35,18 @@
 
 ## التثبيت على BetterDiscord
 
-1. نزّل ملف [`ArabicDiscord.plugin.js`](./ArabicDiscord.plugin.js) مباشرة ([رابط التحميل المباشر](https://raw.githubusercontent.com/7madh1/ArabicDiscord/main/ArabicDiscord.plugin.js)).
+1. نزّل ملف [`betterdiscord/ArabicDiscord.plugin.js`](./betterdiscord/ArabicDiscord.plugin.js) مباشرة ([رابط التحميل المباشر](https://raw.githubusercontent.com/7madh1/ArabicDiscord/main/betterdiscord/ArabicDiscord.plugin.js)).
 2. ضع الملف داخل مجلد إضافات BetterDiscord:
    - عبر **إعدادات Discord ← Plugins ← Open Plugins Folder**.
 3. فعّل **ArabicDiscord** من قائمة الإضافات، ويمكنك تخصيص الخط وحجم الخط ووضع **RTL** وتحديث القواميس يدويًا من أيقونة الإعدادات بجانب الإضافة.
    *(تحذير: لا تُشغّل Vencord وBetterDiscord معًا على نفس تثبيت Discord لتجنب التعارض.)*
+
+---
+
+## بنية المستودع
+
+- **الجذر (`index.tsx`, `styles.css`, `validation.mjs`, `ar.json`, `complex_ar.json`)**: نسخة **Vencord Userplugin** المتوافقة مباشرة مع الاستنساخ داخل `src/userplugins/arabicDiscord`.
+- **مجلد [`betterdiscord/`](./betterdiscord)**: نسخة **BetterDiscord** الكاملة (`ArabicDiscord.plugin.js` مع محوّلات `BdApi`).
 
 ---
 
@@ -57,7 +64,7 @@
   ```bash
   node scripts/validate.mjs
   ```
-- **بناء/فحص نسخة BetterDiscord (`ArabicDiscord.plugin.js`)**:
+- **بناء/فحص نسخة BetterDiscord (`betterdiscord/ArabicDiscord.plugin.js`)**:
   ```bash
   node scripts/build-bd.mjs
   ```

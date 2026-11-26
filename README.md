@@ -35,6 +35,11 @@
    - **`[2] Vencord`**: يتحقق من المتطلبات ويستنسخ Vencord + ArabicDiscord ويبنيهم ويفتح أداة الحقن `pnpm.cmd inject`.
    - **`[3] Update`**: يحدّث النسخة المثبتة تلقائيًا.
 
+> **ملاحظة Windows SmartScreen:** عند تشغيل أي ملف `.bat` محمّل من الإنترنت لأول مرة بدون توقيع رقمي مدفوع، قد يعرض Windows رسالة *Unknown Publisher / SmartScreen* — اضغط **Run** (أو **More info ← Run anyway**)، أو راجع محتوى الملف بالمحرر لأنه مفتوح المصدر بالكامل، أو شغّله مباشرة من PowerShell بالأمر التالي:
+> ```powershell
+> irm https://raw.githubusercontent.com/7madh1/ArabicDiscord/main/Install-ArabicDiscord.bat -OutFile "$env:TEMP\Install-ArabicDiscord.bat"; & "$env:TEMP\Install-ArabicDiscord.bat"
+> ```
+
 ---
 
 ## التثبيت اليدوي

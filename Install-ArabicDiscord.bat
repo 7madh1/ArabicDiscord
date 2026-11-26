@@ -14,16 +14,16 @@ $BdInstallerUrl = "https://github.com/BetterDiscord/Installer/releases/latest/do
 function Write-Header {
     Clear-Host
     Write-Host @'
-  _____                      _ _     
- |___  |_ __ ___   __ _   __| | |__  
-    / /| '_ ` _ \ / _` | / _` | '_ \ 
-   / / | | | | | | (_| || (_| | | | |
-  /_/  |_| |_| |_|\__,_| \__,_|_| |_|
+    _              _     _      ____  _                       _
+   / \   _ __ __ _| |__ (_) ___|  _ \(_)___  ___ ___  _ __ __| |
+  / _ \ | '__/ _` | '_ \| |/ __| | | | / __|/ __/ _ \| '__/ _` |
+ / ___ \| | | (_| | |_) | | (__| |_| | \__ \ (_| (_) | | | (_| |
+/_/   \_\_|  \__,_|_.__/|_|\___|____/|_|___/\___\___/|_|  \__,_|
 '@ -ForegroundColor Cyan
-    Write-Host "  ======================================================" -ForegroundColor DarkCyan
-    Write-Host "    ArabicDiscord v0.1.0  |  Vencord & BetterDiscord    " -ForegroundColor White
-    Write-Host "                Crafted by 7madh                        " -ForegroundColor Magenta
-    Write-Host "  ======================================================" -ForegroundColor DarkCyan
+    Write-Host "  +--------------------------------------------------------------+" -ForegroundColor DarkCyan
+    Write-Host "  |   ArabicDiscord v0.1.0  |  Vencord & BetterDiscord Suite     |" -ForegroundColor White
+    Write-Host "  |                     Created by 7madh                         |" -ForegroundColor Blue
+    Write-Host "  +--------------------------------------------------------------+" -ForegroundColor DarkCyan
     Write-Host ""
 }
 
@@ -322,14 +322,15 @@ function Update-ArabicDiscord {
 
 while ($true) {
     Write-Header
-    Write-Host "Choose your Discord client mod:" -ForegroundColor White
+    Write-Host "  Select an option:" -ForegroundColor White
     Write-Host ""
-    Write-Host "  [1] BetterDiscord  (One-click plugin install + auto updates)" -ForegroundColor Green
-    Write-Host "  [2] Vencord        (Automatic source clone, build & inject)" -ForegroundColor Cyan
-    Write-Host "  [3] Update         (Update existing ArabicDiscord installation)" -ForegroundColor Yellow
-    Write-Host "  [4] Exit" -ForegroundColor Gray
+    Write-Host "    [1] BetterDiscord   - Install & enable ArabicDiscord plugin" -ForegroundColor Green
+    Write-Host "    [2] Vencord         - Clone, build & inject from source" -ForegroundColor Cyan
+    Write-Host "    [3] Update          - Update existing installation" -ForegroundColor Yellow
+    Write-Host "    [4] Exit" -ForegroundColor Gray
     Write-Host ""
-    $choice = Read-Host "Enter choice (1-4)"
+    Write-Host "  --------------------------------------------------------------" -ForegroundColor DarkGray
+    $choice = Read-Host "  Enter choice (1-4)"
 
     try {
         switch ($choice) {

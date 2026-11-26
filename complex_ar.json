@@ -39576,5 +39576,7 @@
     "Sa+h68": [[1, "hours"], " س ", [1, "minutes"], " د"],
     "spl/XS": [[1, "count"], " ث+"],
     "veX7G1": [[2, "weeks"], " أ"],
-    "I1E8p6": [[2, "years"], " س"]
+    "I1E8p6": [[2, "years"], " س"],
+    "4UNoeD": ["شراء ", [1, "planName"]],
+    "5iIGZI": ["ملف GIF ", [1, "index"]]
 }

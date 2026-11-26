@@ -12,7 +12,11 @@
         "MESSAGE_EDITED_TIMESTAMP_A11Y_LABEL": "تم التعديل",
         "GUILD_OWNER": "مالك السيرفر",
         "QUICKSWITCHER_PLACEHOLDER": "ابحث عن محادثة أو ابدأ واحدة",
-        "FIND_OR_START_A_CONVERSATION": "ابحث عن محادثة أو ابدأ واحدة"
+        "FIND_OR_START_A_CONVERSATION": "ابحث عن محادثة أو ابدأ واحدة",
+        "QJyuxY": "ي",
+        "1LyF1h": "س",
+        "n7dksO": "د",
+        "6m/6nM": "ث"
     },
     "byText": {
         "Find or start a conversation": "ابحث عن محادثة أو ابدأ واحدة",
@@ -20364,6 +20368,23 @@
         "Capture Untranslated Strings": "تسجيل النصوص غير المترجمة",
         "Log newly spotted English strings while browsing Discord": "رصد أي جمل إنجليزية جديدة أثناء تصفح ديسكورد لتصديرها لاحقاً",
         "Export Untranslated Strings": "تصدير النصوص غير المترجمة",
-        "Update Arabic Translations": "تحديث الترجمات الآن"
+        "Update Arabic Translations": "تحديث الترجمات الآن",
+        "Keep servers, DMs, and channels open without losing your place": "أبقِ السيرفرات والرسائل الخاصة والقنوات مفتوحة دون فقدان مكانك",
+        "Use tabs to switch between chats": "استخدم التبويبات للتنقل بين المحادثات",
+        "Additional Actions": "إجراءات إضافية",
+        "Teens cannot change this setting": "لا يمكن للمراهقين تغيير هذا الإعداد",
+        "Once you leave, it disappears and you won't be able to play it again. You'll keep the Orbs you earned.": "بمجرد المغادرة، ستختفي ولن تتمكن من لعبها مرة أخرى. ستحتفظ بنقاط Orbs التي كسبتها.",
+        "Keep Playing": "متابعة اللعب",
+        "Leave this game?": "مغادرة هذه اللعبة؟",
+        "Revisit your stats and character. Only you can see this.": "أعد استعراض إحصائياتك وشخصيتك. أنت فقط من يرى هذا.",
+        "Relaunch Checkpoint": "إعادة تشغيل Checkpoint",
+        "Find Checkpoint from your profile": "اعثر على Checkpoint من ملفك الشخصي",
+        "Your Library": "مكتبتك",
+        "Couldn’t remove the test bot. Try again.": "تعذّرت إزالة البوت التجريبي. حاول مرة أخرى.",
+        "Conjure Apps": "تطبيقات Conjure",
+        "Allows others to draw and stamp on your streams.": "يسمح للآخرين بالرسم ووضع الملصقات على بثوثك.",
+        "Switch to Nitro to unlock profile perks like display name styles, profile themes, and more.": "بدّل إلى Nitro لفتح مزايا الملف الشخصي مثل أنماط اسم العرض وسمات الملف الشخصي والمزيد.",
+        "Switch to Nitro": "التبديل إلى Nitro",
+        "Nitro Basic doesn’t include custom profiles": "خطة Nitro Basic لا تتضمن تخصيص الملف الشخصي"
     }
 }

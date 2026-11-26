@@ -1,0 +1,21 @@
+name: Check Discord String Updates
+
+on:
+    workflow_dispatch:
+    schedule:
+        - cron: "0 6 * * 1"
+
+jobs:
+    sync-check:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+
+            - name: Scan live Discord strings vs Arabic dictionaries
+              run: node scripts/check-discord-updates.mjs

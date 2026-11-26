@@ -63,11 +63,11 @@ jobs:
 
             - name: Check formatting
               working-directory: vencord
-              run: pnpm exec oxfmt --check src/userplugins/arabicDiscord/styles.css src/userplugins/arabicDiscord/ar.json src/userplugins/arabicDiscord/complex_ar.json src/userplugins/arabicDiscord/.github/workflows/validate.yml
+              run: pnpm exec oxfmt --check src/userplugins/arabicDiscord/styles.css src/userplugins/arabicDiscord/ar.json src/userplugins/arabicDiscord/complex_ar.json src/userplugins/arabicDiscord/.github/workflows/validate.yml src/userplugins/arabicDiscord/.github/workflows/discord-sync-check.yml
 
             - name: Lint plugin & scripts
               working-directory: vencord
-              run: pnpm exec oxlint src/userplugins/arabicDiscord/index.tsx src/userplugins/arabicDiscord/validation.mjs src/userplugins/arabicDiscord/betterdiscord/shims.mjs src/userplugins/arabicDiscord/betterdiscord/fetch-shim.mjs src/userplugins/arabicDiscord/betterdiscord/entry.mjs src/userplugins/arabicDiscord/scripts/build-bd.mjs src/userplugins/arabicDiscord/scripts/validate.mjs src/userplugins/arabicDiscord/scripts/runtime.test.mjs
+              run: pnpm exec oxlint src/userplugins/arabicDiscord/index.tsx src/userplugins/arabicDiscord/validation.mjs src/userplugins/arabicDiscord/betterdiscord/shims.mjs src/userplugins/arabicDiscord/betterdiscord/fetch-shim.mjs src/userplugins/arabicDiscord/betterdiscord/entry.mjs src/userplugins/arabicDiscord/scripts/build-bd.mjs src/userplugins/arabicDiscord/scripts/validate.mjs src/userplugins/arabicDiscord/scripts/runtime.test.mjs src/userplugins/arabicDiscord/scripts/check-discord-updates.mjs
 
             - name: Verify BetterDiscord plugin bundle is up to date
               working-directory: vencord

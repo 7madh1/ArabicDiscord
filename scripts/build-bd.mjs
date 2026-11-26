@@ -90,11 +90,11 @@ const result = await esbuild.build({
                     path: intlHashPath,
                 }));
                 build.onResolve({ filter: /^\.\/styles\.css\?managed$/ }, () => ({
-                    path: cssPath,
+                    path: "styles.css",
                     namespace: "bd-css-text",
                 }));
-                build.onLoad({ filter: /.*/, namespace: "bd-css-text" }, args => ({
-                    contents: `export default ${JSON.stringify(fs.readFileSync(args.path, "utf8").replace(/\r\n/g, "\n"))};`,
+                build.onLoad({ filter: /.*/, namespace: "bd-css-text" }, () => ({
+                    contents: `export default ${JSON.stringify(fs.readFileSync(cssPath, "utf8").replace(/\r\n/g, "\n"))};`,
                     loader: "js",
                 }));
                 for (const id of Object.keys(shimModules)) {

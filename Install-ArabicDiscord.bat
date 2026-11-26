@@ -13,9 +13,17 @@ $BdInstallerUrl = "https://github.com/BetterDiscord/Installer/releases/latest/do
 
 function Write-Header {
     Clear-Host
-    Write-Host "==========================================================" -ForegroundColor Cyan
-    Write-Host "    ArabicDiscord v0.1.0 Installer (Vencord & BetterDiscord)" -ForegroundColor Cyan
-    Write-Host "==========================================================" -ForegroundColor Cyan
+    Write-Host @'
+  _____                      _ _     
+ |___  |_ __ ___   __ _   __| | |__  
+    / /| '_ ` _ \ / _` | / _` | '_ \ 
+   / / | | | | | | (_| || (_| | | | |
+  /_/  |_| |_| |_|\__,_| \__,_|_| |_|
+'@ -ForegroundColor Cyan
+    Write-Host "  ======================================================" -ForegroundColor DarkCyan
+    Write-Host "    ArabicDiscord v0.1.0  |  Vencord & BetterDiscord    " -ForegroundColor White
+    Write-Host "                Crafted by 7madh                        " -ForegroundColor Magenta
+    Write-Host "  ======================================================" -ForegroundColor DarkCyan
     Write-Host ""
 }
 

@@ -1,8 +1,17 @@
-# ArabicDiscord
+<div align="center">
 
-**ArabicDiscord** هي إضافة (Userplugin) لـ [Vencord](https://vencord.dev) لتعريب واجهة Discord بالكامل باللغة العربية، مع دعم الخطوط العربية، وتنسيق التواريخ والأرقام، وخيار عكس اتجاه الواجهة بالكامل من اليمين إلى اليسار (**RTL**).
+# 🌙 ArabicDiscord
 
-> المطور: **7madh**
+### تجربة تعريب Discord العربية الكاملة لـ **Vencord** و **BetterDiscord**
+
+**صُنع بواسطة [`7madh`](https://github.com/7madh1) · الإصدار `v0.1.0` · متوافق مع `Discord app-1.0.9270`**
+
+[![Release](https://img.shields.io/badge/Release-v0.1.0-5865F2?style=for-the-badge&logo=github)](https://github.com/7madh1/ArabicDiscord/releases)
+[![Vencord](https://img.shields.io/badge/Vencord-Userplugin-7289DA?style=for-the-badge)](https://vencord.dev)
+[![BetterDiscord](https://img.shields.io/badge/BetterDiscord-Plugin-3E82E5?style=for-the-badge)](./betterdiscord/ArabicDiscord.plugin.js)
+[![License](https://img.shields.io/badge/License-GPL--3.0-green?style=for-the-badge)](./LICENSE)
+
+</div>
 
 ---
 

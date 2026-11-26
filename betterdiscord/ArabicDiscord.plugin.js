@@ -2125,6 +2125,30 @@ var ArabicDiscord = class {
     if (!settingsObj) {
       return container;
     }
+    const banner = document.createElement("div");
+    banner.style.display = "flex";
+    banner.style.alignItems = "center";
+    banner.style.justifyContent = "space-between";
+    banner.style.padding = "14px 18px";
+    banner.style.borderRadius = "10px";
+    banner.style.background = "linear-gradient(135deg, rgba(88, 101, 242, 0.22), rgba(114, 137, 218, 0.08))";
+    banner.style.border = "1px solid rgba(88, 101, 242, 0.4)";
+    const brandTitle = document.createElement("div");
+    brandTitle.textContent = "ArabicDiscord v0.1.0";
+    brandTitle.style.fontSize = "16px";
+    brandTitle.style.fontWeight = "700";
+    brandTitle.style.color = "var(--header-primary, #f2f3f5)";
+    const brandAuthor = document.createElement("span");
+    brandAuthor.textContent = "by 7madh";
+    brandAuthor.style.fontSize = "13px";
+    brandAuthor.style.fontWeight = "600";
+    brandAuthor.style.padding = "4px 10px";
+    brandAuthor.style.borderRadius = "999px";
+    brandAuthor.style.background = "rgba(88, 101, 242, 0.28)";
+    brandAuthor.style.color = "#dfe3ff";
+    banner.appendChild(brandTitle);
+    banner.appendChild(brandAuthor);
+    container.appendChild(banner);
     const { def, store } = settingsObj;
     const fontSelect = document.createElement("select");
     fontSelect.setAttribute("data-setting", "arabicFont");

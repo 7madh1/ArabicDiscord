@@ -2075,6 +2075,36 @@ function findToolboxAction(node, id) {
   }
   return null;
 }
+function createSettingRow(titleText, descText, controlEl) {
+  const row = document.createElement("div");
+  row.style.display = "flex";
+  row.style.alignItems = "center";
+  row.style.justifyContent = "space-between";
+  row.style.gap = "16px";
+  row.style.padding = "14px 16px";
+  row.style.borderRadius = "8px";
+  row.style.background = "var(--background-secondary, rgba(255, 255, 255, 0.04))";
+  row.style.border = "1px solid var(--background-modifier-accent, rgba(255, 255, 255, 0.08))";
+  const info = document.createElement("div");
+  info.style.display = "flex";
+  info.style.flexDirection = "column";
+  info.style.gap = "4px";
+  info.style.flex = "1";
+  const title = document.createElement("div");
+  title.textContent = titleText;
+  title.style.fontSize = "15px";
+  title.style.fontWeight = "600";
+  title.style.color = "var(--header-primary, #f2f3f5)";
+  const desc = document.createElement("div");
+  desc.textContent = descText;
+  desc.style.fontSize = "13px";
+  desc.style.color = "var(--text-muted, #b5bac1)";
+  info.appendChild(title);
+  info.appendChild(desc);
+  row.appendChild(info);
+  row.appendChild(controlEl);
+  return row;
+}
 var ArabicDiscord = class {
   start() {
     resetBdWaitControllers();
@@ -2085,68 +2115,116 @@ var ArabicDiscord = class {
     index_default.stop();
   }
   getSettingsPanel() {
-    const { BdApi } = globalThis;
     const settingsObj = activeSettingsObject;
-    if (!BdApi?.UI || !settingsObj) {
-      return document.createElement("div");
-    }
-    const { def, store } = settingsObj;
-    const panelConfig = [
-      {
-        type: "dropdown",
-        id: "arabicFont",
-        name: "\u0627\u0644\u062E\u0637 \u0627\u0644\u0639\u0631\u0628\u064A (Arabic Font)",
-        note: "\u0627\u062E\u062A\u0631 \u0627\u0644\u062E\u0637 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0644\u0644\u0648\u0627\u062C\u0647\u0629 \u0648\u0627\u0644\u0646\u0635\u0648\u0635 \u0627\u0644\u0639\u0631\u0628\u064A\u0629.",
-        value: store.arabicFont,
-        options: def.arabicFont.options.map((o) => ({
-          label: o.label,
-          value: o.value
-        }))
-      },
-      {
-        type: "slider",
-        id: "fontScale",
-        name: "\u062D\u062C\u0645 \u0627\u0644\u062E\u0637 (Font Size %)",
-        note: "\u0636\u0628\u0637 \u0646\u0633\u0628\u0629 \u062A\u0643\u0628\u064A\u0631 \u0623\u0648 \u062A\u0635\u063A\u064A\u0631 \u0627\u0644\u062E\u0637 \u0627\u0644\u0639\u0631\u0628\u064A.",
-        value: Number(store.fontScale) || 100,
-        min: 90,
-        max: 120,
-        step: 5,
-        digits: 0
-      },
-      {
-        type: "switch",
-        id: "enableRtl",
-        name: "\u062A\u0641\u0639\u064A\u0644 \u0627\u062A\u062C\u0627\u0647 \u0627\u0644\u0648\u0627\u062C\u0647\u0629 \u0627\u0644\u0643\u0627\u0645\u0644 (Enable Full RTL Layout)",
-        note: "\u0639\u0643\u0633 \u0642\u0648\u0627\u0626\u0645 \u062F\u064A\u0633\u0643\u0648\u0631\u062F \u0648\u0627\u0644\u0646\u0648\u0627\u0641\u0630 \u0645\u0646 \u0627\u0644\u064A\u0645\u064A\u0646 \u0625\u0644\u0649 \u0627\u0644\u064A\u0633\u0627\u0631.",
-        value: Boolean(store.enableRtl)
-      }
-    ];
     const container = document.createElement("div");
     container.dir = "rtl";
     container.style.display = "flex";
     container.style.flexDirection = "column";
     container.style.gap = "12px";
-    if (typeof BdApi.UI.buildSettingsPanel === "function") {
-      const panelEl = BdApi.UI.buildSettingsPanel({
-        settings: panelConfig,
-        onChange: (_category, id, value) => {
-          store[id] = value;
-          def[id]?.onChange?.(value);
-        }
-      });
-      if (panelEl instanceof Node) {
-        container.appendChild(panelEl);
-      }
+    container.style.padding = "8px 0";
+    if (!settingsObj) {
+      return container;
     }
-    const actionsRow = document.createElement("div");
-    actionsRow.style.display = "flex";
-    actionsRow.style.gap = "8px";
-    actionsRow.style.paddingTop = "6px";
+    const { def, store } = settingsObj;
+    const fontSelect = document.createElement("select");
+    fontSelect.setAttribute("data-setting", "arabicFont");
+    fontSelect.style.minWidth = "220px";
+    fontSelect.style.padding = "8px 10px";
+    fontSelect.style.borderRadius = "6px";
+    fontSelect.style.border = "1px solid var(--background-modifier-accent, rgba(255,255,255,0.16))";
+    fontSelect.style.background = "var(--input-background, #1e1f22)";
+    fontSelect.style.color = "var(--text-normal, #dbdee1)";
+    fontSelect.style.fontSize = "14px";
+    fontSelect.style.cursor = "pointer";
+    for (const opt of def.arabicFont.options) {
+      const optionEl = document.createElement("option");
+      optionEl.value = opt.value;
+      optionEl.textContent = opt.label;
+      if (opt.value === store.arabicFont) {
+        optionEl.selected = true;
+      }
+      fontSelect.appendChild(optionEl);
+    }
+    fontSelect.value = store.arabicFont;
+    fontSelect.addEventListener("change", () => {
+      store.arabicFont = fontSelect.value;
+      def.arabicFont?.onChange?.(fontSelect.value);
+    });
+    container.appendChild(
+      createSettingRow(
+        "\u0627\u0644\u062E\u0637 \u0627\u0644\u0639\u0631\u0628\u064A (Arabic Font)",
+        "\u0627\u062E\u062A\u0631 \u0645\u0646 \u0628\u064A\u0646 \u0627\u0644\u062E\u0637\u0648\u0637 \u0627\u0644\u0639\u0631\u0628\u064A\u0629 \u0627\u0644\u0645\u062F\u0645\u062C\u0629 \u0623\u0648 \u062E\u0637 \u0627\u0644\u0646\u0638\u0627\u0645 \u0644\u0644\u0648\u0627\u062C\u0647\u0629 \u0648\u0627\u0644\u0646\u0635\u0648\u0635.",
+        fontSelect
+      )
+    );
+    const scaleWrap = document.createElement("div");
+    scaleWrap.style.display = "flex";
+    scaleWrap.style.alignItems = "center";
+    scaleWrap.style.gap = "10px";
+    const scaleSlider = document.createElement("input");
+    scaleSlider.type = "range";
+    scaleSlider.setAttribute("data-setting", "fontScale");
+    scaleSlider.min = "90";
+    scaleSlider.max = "120";
+    scaleSlider.step = "5";
+    scaleSlider.value = String(Number(store.fontScale) || 100);
+    scaleSlider.style.width = "160px";
+    scaleSlider.style.cursor = "pointer";
+    const scaleValueLabel = document.createElement("span");
+    scaleValueLabel.textContent = `${scaleSlider.value}%`;
+    scaleValueLabel.style.minWidth = "44px";
+    scaleValueLabel.style.textAlign = "center";
+    scaleValueLabel.style.fontWeight = "600";
+    scaleValueLabel.style.fontSize = "14px";
+    scaleValueLabel.style.color = "var(--header-primary, #f2f3f5)";
+    scaleSlider.addEventListener("input", () => {
+      const num = Number(scaleSlider.value) || 100;
+      scaleValueLabel.textContent = `${num}%`;
+      store.fontScale = num;
+      def.fontScale?.onChange?.(num);
+    });
+    scaleSlider.addEventListener("change", () => {
+      const num = Number(scaleSlider.value) || 100;
+      scaleValueLabel.textContent = `${num}%`;
+      store.fontScale = num;
+      def.fontScale?.onChange?.(num);
+    });
+    scaleWrap.appendChild(scaleSlider);
+    scaleWrap.appendChild(scaleValueLabel);
+    container.appendChild(
+      createSettingRow(
+        "\u062D\u062C\u0645 \u0627\u0644\u062E\u0637 \u0627\u0644\u0639\u0631\u0628\u064A (Font Size)",
+        "\u062A\u062D\u0643\u0651\u0645 \u0641\u064A \u0646\u0633\u0628\u0629 \u062A\u0643\u0628\u064A\u0631 \u0623\u0648 \u062A\u0635\u063A\u064A\u0631 \u0627\u0644\u0646\u0635\u0648\u0635 \u0627\u0644\u0639\u0631\u0628\u064A\u0629 \u0645\u0646 90% \u0625\u0644\u0649 120%.",
+        scaleWrap
+      )
+    );
+    const rtlCheckbox = document.createElement("input");
+    rtlCheckbox.type = "checkbox";
+    rtlCheckbox.setAttribute("data-setting", "enableRtl");
+    rtlCheckbox.checked = Boolean(store.enableRtl);
+    rtlCheckbox.style.width = "22px";
+    rtlCheckbox.style.height = "22px";
+    rtlCheckbox.style.cursor = "pointer";
+    rtlCheckbox.style.accentColor = "var(--brand-500, #5865f2)";
+    rtlCheckbox.addEventListener("change", () => {
+      const nextVal = Boolean(rtlCheckbox.checked);
+      store.enableRtl = nextVal;
+      def.enableRtl?.onChange?.(nextVal);
+    });
+    container.appendChild(
+      createSettingRow(
+        "\u062F\u0639\u0645 \u0627\u062A\u062C\u0627\u0647 RTL \u0627\u0644\u0643\u0627\u0645\u0644 (Enable Full RTL Layout)",
+        "\u0639\u0643\u0633 \u0627\u0644\u0642\u0648\u0627\u0626\u0645\u060C \u0627\u0644\u0642\u0646\u0648\u0627\u062A\u060C \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A\u060C \u0648\u0627\u0644\u0646\u0648\u0627\u0641\u0630 \u0628\u0627\u0644\u0643\u0627\u0645\u0644 \u0645\u0646 \u0627\u0644\u064A\u0645\u064A\u0646 \u0625\u0644\u0649 \u0627\u0644\u064A\u0633\u0627\u0631.",
+        rtlCheckbox
+      )
+    );
     const updateBtn = document.createElement("button");
     updateBtn.type = "button";
+    updateBtn.setAttribute("data-action", "updateTranslations");
     updateBtn.className = "bd-button bd-button-filled bd-button-color-brand";
     updateBtn.textContent = "\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062A\u0631\u062C\u0645\u0627\u062A \u0627\u0644\u0622\u0646";
+    updateBtn.style.padding = "8px 16px";
+    updateBtn.style.cursor = "pointer";
     updateBtn.addEventListener("click", () => {
       const action = findToolboxAction(
         index_default.toolboxActions?.(),
@@ -2154,8 +2232,13 @@ var ArabicDiscord = class {
       );
       action?.();
     });
-    actionsRow.appendChild(updateBtn);
-    container.appendChild(actionsRow);
+    container.appendChild(
+      createSettingRow(
+        "\u0645\u0632\u0627\u0645\u0646\u0629 \u0648\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0642\u0627\u0645\u0648\u0633",
+        "\u062C\u0644\u0628 \u0623\u062D\u062F\u062B \u062A\u0631\u062C\u0645\u0627\u062A \u0648\u0627\u062C\u0647\u0629 \u062F\u064A\u0633\u0643\u0648\u0631\u062F \u0648\u062A\u062D\u062F\u064A\u062B\u0627\u062A \u0627\u0644\u0646\u0635\u0648\u0635 \u0645\u0646 GitHub \u0641\u0648\u0631\u064B\u0627.",
+        updateBtn
+      )
+    );
     return container;
   }
 };

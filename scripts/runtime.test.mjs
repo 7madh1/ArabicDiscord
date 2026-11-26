@@ -653,20 +653,32 @@ test("BetterDiscord ArabicDiscord.plugin.js runs start/settings/sync/stop cleanl
 
     const makeMockEl = tag => {
         const listeners = new Map();
+        const attrs = new Map();
         return {
             tagName: tag,
             children: [],
             style: {},
             dir: "",
             type: "",
+            value: "",
+            checked: false,
             className: "",
             textContent: "",
+            setAttribute(k, v) {
+                attrs.set(k, String(v));
+            },
+            getAttribute(k) {
+                return attrs.get(k) ?? null;
+            },
             appendChild(child) {
                 this.children.push(child);
                 return child;
             },
             addEventListener(ev, fn) {
                 listeners.set(ev, fn);
+            },
+            dispatch(ev) {
+                listeners.get(ev)?.();
             },
             click() {
                 listeners.get("click")?.();
@@ -720,7 +732,6 @@ test("BetterDiscord ArabicDiscord.plugin.js runs start/settings/sync/stop cleanl
         emitChange() {},
     };
 
-    let lastPanelOnChange = null;
     let pluginInstance = null;
 
     try {
@@ -801,10 +812,6 @@ test("BetterDiscord ArabicDiscord.plugin.js runs start/settings/sync/stop cleanl
             },
             UI: {
                 showToast: (text, opts) => bdToasts.push({ text, opts }),
-                buildSettingsPanel: ({ onChange }) => {
-                    lastPanelOnChange = onChange;
-                    return new globalThis.Node();
-                },
             },
             Logger: { info() {}, warn() {}, error() {} },
             React: {
@@ -832,16 +839,41 @@ test("BetterDiscord ArabicDiscord.plugin.js runs start/settings/sync/stop cleanl
         assert.notEqual(discordUtils.createDateFormatter, origDateFormatter);
         assert.ok(bdNetFetches >= 2);
 
+        const findEl = (node, attrName, attrVal) => {
+            if (!node || typeof node !== "object") return null;
+            if (node.getAttribute?.(attrName) === attrVal) return node;
+            for (const child of node.children || []) {
+                const hit = findEl(child, attrName, attrVal);
+                if (hit) return hit;
+            }
+            return null;
+        };
+
         const panel = pluginInstance.getSettingsPanel();
-        assert.equal(typeof lastPanelOnChange, "function");
-        lastPanelOnChange(null, "enableRtl", true);
+        const fontSelect = findEl(panel, "data-setting", "arabicFont");
+        const scaleSlider = findEl(panel, "data-setting", "fontScale");
+        const rtlSwitch = findEl(panel, "data-setting", "enableRtl");
+        const updateBtn = findEl(panel, "data-action", "updateTranslations");
+
+        assert.ok(fontSelect && fontSelect.children.length >= 13);
+        assert.ok(scaleSlider && updateBtn && rtlSwitch);
+
+        fontSelect.value = "tajawal";
+        fontSelect.dispatch("change");
+        assert.equal(rootAttrs.get("data-arabic-font"), "tajawal");
+
+        scaleSlider.value = "110";
+        scaleSlider.dispatch("input");
+        assert.equal(rootStyle.get("--arabic-font-scale"), "110%");
+
+        rtlSwitch.checked = true;
+        rtlSwitch.dispatch("change");
         assert.equal(rootAttrs.get("data-arabic-rtl"), "1");
         assert.equal(rootAttrs.get("dir"), "rtl");
         assert.equal(bdData.get("ArabicDiscord:settings")?.enableRtl, true);
 
-        const updateBtn = panel.children.at(-1)?.children?.[0];
         const beforeClicks = bdNetFetches;
-        updateBtn?.click();
+        updateBtn.click();
         await new Promise(r => setTimeout(r, 40));
         assert.ok(bdNetFetches >= beforeClicks + 2);
 

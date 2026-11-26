@@ -25,6 +25,41 @@ function findToolboxAction(node, id) {
     return null;
 }
 
+function createSettingRow(titleText, descText, controlEl) {
+    const row = document.createElement("div");
+    row.style.display = "flex";
+    row.style.alignItems = "center";
+    row.style.justifyContent = "space-between";
+    row.style.gap = "16px";
+    row.style.padding = "14px 16px";
+    row.style.borderRadius = "8px";
+    row.style.background = "var(--background-secondary, rgba(255, 255, 255, 0.04))";
+    row.style.border = "1px solid var(--background-modifier-accent, rgba(255, 255, 255, 0.08))";
+
+    const info = document.createElement("div");
+    info.style.display = "flex";
+    info.style.flexDirection = "column";
+    info.style.gap = "4px";
+    info.style.flex = "1";
+
+    const title = document.createElement("div");
+    title.textContent = titleText;
+    title.style.fontSize = "15px";
+    title.style.fontWeight = "600";
+    title.style.color = "var(--header-primary, #f2f3f5)";
+
+    const desc = document.createElement("div");
+    desc.textContent = descText;
+    desc.style.fontSize = "13px";
+    desc.style.color = "var(--text-muted, #b5bac1)";
+
+    info.appendChild(title);
+    info.appendChild(desc);
+    row.appendChild(info);
+    row.appendChild(controlEl);
+    return row;
+}
+
 export default class ArabicDiscord {
     start() {
         resetBdWaitControllers();
@@ -37,73 +72,132 @@ export default class ArabicDiscord {
     }
 
     getSettingsPanel() {
-        const { BdApi } = globalThis;
         const settingsObj = activeSettingsObject;
-        if (!BdApi?.UI || !settingsObj) {
-            return document.createElement("div");
-        }
-
-        const { def, store } = settingsObj;
-        const panelConfig = [
-            {
-                type: "dropdown",
-                id: "arabicFont",
-                name: "الخط العربي (Arabic Font)",
-                note: "اختر الخط المستخدم للواجهة والنصوص العربية.",
-                value: store.arabicFont,
-                options: def.arabicFont.options.map(o => ({
-                    label: o.label,
-                    value: o.value,
-                })),
-            },
-            {
-                type: "slider",
-                id: "fontScale",
-                name: "حجم الخط (Font Size %)",
-                note: "ضبط نسبة تكبير أو تصغير الخط العربي.",
-                value: Number(store.fontScale) || 100,
-                min: 90,
-                max: 120,
-                step: 5,
-                digits: 0,
-            },
-            {
-                type: "switch",
-                id: "enableRtl",
-                name: "تفعيل اتجاه الواجهة الكامل (Enable Full RTL Layout)",
-                note: "عكس قوائم ديسكورد والنوافذ من اليمين إلى اليسار.",
-                value: Boolean(store.enableRtl),
-            },
-        ];
-
         const container = document.createElement("div");
         container.dir = "rtl";
         container.style.display = "flex";
         container.style.flexDirection = "column";
         container.style.gap = "12px";
+        container.style.padding = "8px 0";
 
-        if (typeof BdApi.UI.buildSettingsPanel === "function") {
-            const panelEl = BdApi.UI.buildSettingsPanel({
-                settings: panelConfig,
-                onChange: (_category, id, value) => {
-                    store[id] = value;
-                    def[id]?.onChange?.(value);
-                },
-            });
-            if (panelEl instanceof Node) {
-                container.appendChild(panelEl);
-            }
+        if (!settingsObj) {
+            return container;
         }
 
-        const actionsRow = document.createElement("div");
-        actionsRow.style.display = "flex";
-        actionsRow.style.gap = "8px";
-        actionsRow.style.paddingTop = "6px";
+        const { def, store } = settingsObj;
 
+        // 1. Arabic Font selector
+        const fontSelect = document.createElement("select");
+        fontSelect.setAttribute("data-setting", "arabicFont");
+        fontSelect.style.minWidth = "220px";
+        fontSelect.style.padding = "8px 10px";
+        fontSelect.style.borderRadius = "6px";
+        fontSelect.style.border = "1px solid var(--background-modifier-accent, rgba(255,255,255,0.16))";
+        fontSelect.style.background = "var(--input-background, #1e1f22)";
+        fontSelect.style.color = "var(--text-normal, #dbdee1)";
+        fontSelect.style.fontSize = "14px";
+        fontSelect.style.cursor = "pointer";
+
+        for (const opt of def.arabicFont.options) {
+            const optionEl = document.createElement("option");
+            optionEl.value = opt.value;
+            optionEl.textContent = opt.label;
+            if (opt.value === store.arabicFont) {
+                optionEl.selected = true;
+            }
+            fontSelect.appendChild(optionEl);
+        }
+        fontSelect.value = store.arabicFont;
+        fontSelect.addEventListener("change", () => {
+            store.arabicFont = fontSelect.value;
+            def.arabicFont?.onChange?.(fontSelect.value);
+        });
+        container.appendChild(
+            createSettingRow(
+                "الخط العربي (Arabic Font)",
+                "اختر من بين الخطوط العربية المدمجة أو خط النظام للواجهة والنصوص.",
+                fontSelect,
+            ),
+        );
+
+        // 2. Font Scale slider (90% - 120%)
+        const scaleWrap = document.createElement("div");
+        scaleWrap.style.display = "flex";
+        scaleWrap.style.alignItems = "center";
+        scaleWrap.style.gap = "10px";
+
+        const scaleSlider = document.createElement("input");
+        scaleSlider.type = "range";
+        scaleSlider.setAttribute("data-setting", "fontScale");
+        scaleSlider.min = "90";
+        scaleSlider.max = "120";
+        scaleSlider.step = "5";
+        scaleSlider.value = String(Number(store.fontScale) || 100);
+        scaleSlider.style.width = "160px";
+        scaleSlider.style.cursor = "pointer";
+
+        const scaleValueLabel = document.createElement("span");
+        scaleValueLabel.textContent = `${scaleSlider.value}%`;
+        scaleValueLabel.style.minWidth = "44px";
+        scaleValueLabel.style.textAlign = "center";
+        scaleValueLabel.style.fontWeight = "600";
+        scaleValueLabel.style.fontSize = "14px";
+        scaleValueLabel.style.color = "var(--header-primary, #f2f3f5)";
+
+        scaleSlider.addEventListener("input", () => {
+            const num = Number(scaleSlider.value) || 100;
+            scaleValueLabel.textContent = `${num}%`;
+            store.fontScale = num;
+            def.fontScale?.onChange?.(num);
+        });
+        scaleSlider.addEventListener("change", () => {
+            const num = Number(scaleSlider.value) || 100;
+            scaleValueLabel.textContent = `${num}%`;
+            store.fontScale = num;
+            def.fontScale?.onChange?.(num);
+        });
+
+        scaleWrap.appendChild(scaleSlider);
+        scaleWrap.appendChild(scaleValueLabel);
+        container.appendChild(
+            createSettingRow(
+                "حجم الخط العربي (Font Size)",
+                "تحكّم في نسبة تكبير أو تصغير النصوص العربية من 90% إلى 120%.",
+                scaleWrap,
+            ),
+        );
+
+        // 3. Full RTL Layout toggle
+        const rtlCheckbox = document.createElement("input");
+        rtlCheckbox.type = "checkbox";
+        rtlCheckbox.setAttribute("data-setting", "enableRtl");
+        rtlCheckbox.checked = Boolean(store.enableRtl);
+        rtlCheckbox.style.width = "22px";
+        rtlCheckbox.style.height = "22px";
+        rtlCheckbox.style.cursor = "pointer";
+        rtlCheckbox.style.accentColor = "var(--brand-500, #5865f2)";
+
+        rtlCheckbox.addEventListener("change", () => {
+            const nextVal = Boolean(rtlCheckbox.checked);
+            store.enableRtl = nextVal;
+            def.enableRtl?.onChange?.(nextVal);
+        });
+        container.appendChild(
+            createSettingRow(
+                "دعم اتجاه RTL الكامل (Enable Full RTL Layout)",
+                "عكس القوائم، القنوات، الإعدادات، والنوافذ بالكامل من اليمين إلى اليسار.",
+                rtlCheckbox,
+            ),
+        );
+
+        // 4. Remote Dictionary Manual Update Button
         const updateBtn = document.createElement("button");
         updateBtn.type = "button";
+        updateBtn.setAttribute("data-action", "updateTranslations");
         updateBtn.className = "bd-button bd-button-filled bd-button-color-brand";
         updateBtn.textContent = "تحديث الترجمات الآن";
+        updateBtn.style.padding = "8px 16px";
+        updateBtn.style.cursor = "pointer";
         updateBtn.addEventListener("click", () => {
             const action = findToolboxAction(
                 plugin.toolboxActions?.(),
@@ -111,8 +205,13 @@ export default class ArabicDiscord {
             );
             action?.();
         });
-        actionsRow.appendChild(updateBtn);
-        container.appendChild(actionsRow);
+        container.appendChild(
+            createSettingRow(
+                "مزامنة وتحديث القاموس",
+                "جلب أحدث ترجمات واجهة ديسكورد وتحديثات النصوص من GitHub فورًا.",
+                updateBtn,
+            ),
+        );
 
         return container;
     }

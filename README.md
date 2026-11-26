@@ -29,16 +29,21 @@
 
 ## التثبيت التلقائي السريع (Windows)
 
-1. نزّل [`Install-ArabicDiscord.bat`](./Install-ArabicDiscord.bat) من صفحة [**Releases**](https://github.com/7madh1/ArabicDiscord/releases).
-2. شغّل الملف واختر:
-   - **`[1] BetterDiscord`**: يثبّت [`betterdiscord/ArabicDiscord.plugin.js`](./betterdiscord/ArabicDiscord.plugin.js) ويفعّله تلقائيًا.
-   - **`[2] Vencord`**: يتحقق من المتطلبات ويستنسخ Vencord + ArabicDiscord ويبنيهم ويفتح أداة الحقن `pnpm.cmd inject`.
-   - **`[3] Update`**: يحدّث النسخة المثبتة تلقائيًا.
+### الطريقة الأولى: أمر PowerShell مباشر (موصى به — بدون أي تنبيه SmartScreen)
+افتح **PowerShell** أو **Windows Terminal** والصق السطر التالي واضغط `Enter`:
 
-> **ملاحظة Windows SmartScreen:** عند تشغيل أي ملف `.bat` محمّل من الإنترنت لأول مرة بدون توقيع رقمي مدفوع، قد يعرض Windows رسالة *Unknown Publisher / SmartScreen* — اضغط **Run** (أو **More info ← Run anyway**)، أو راجع محتوى الملف بالمحرر لأنه مفتوح المصدر بالكامل، أو شغّله مباشرة من PowerShell بالأمر التالي:
-> ```powershell
-> irm https://raw.githubusercontent.com/7madh1/ArabicDiscord/main/Install-ArabicDiscord.bat -OutFile "$env:TEMP\Install-ArabicDiscord.bat"; & "$env:TEMP\Install-ArabicDiscord.bat"
-> ```
+```powershell
+irm https://raw.githubusercontent.com/7madh1/ArabicDiscord/main/install.ps1 | iex
+```
+
+### الطريقة الثانية: ملف التثبيت التفاعلي
+1. نزّل [`Install-ArabicDiscord.bat`](./Install-ArabicDiscord.bat) من صفحة [**Releases**](https://github.com/7madh1/ArabicDiscord/releases).
+2. إذا ظهر تنبيه *Windows SmartScreen / Unknown Publisher*، اضغط كليك يمين على الملف ← **Properties** ← فعّل **Unblock** ← **OK** ثم شغّله (أو اضغط **More info ← Run anyway**).
+
+في كلتا الطريقتين ستظهر لك القائمة لاختيار:
+- **`[1] BetterDiscord`**: يثبّت [`betterdiscord/ArabicDiscord.plugin.js`](./betterdiscord/ArabicDiscord.plugin.js) ويفعّله تلقائيًا.
+- **`[2] Vencord`**: يتحقق من المتطلبات ويستنسخ Vencord + ArabicDiscord ويبنيهم ويفتح أداة الحقن `pnpm.cmd inject`.
+- **`[3] Update`**: يحدّث النسخة المثبتة تلقائيًا.
 
 ---
 
@@ -77,7 +82,8 @@ pnpm inject
 | [`ar.json`](./ar.json) / [`complex_ar.json`](./complex_ar.json) | قواميس النصوص البسيطة والرسائل المعقدة وصيغ الجمع |
 | [`betterdiscord/`](./betterdiscord) | محوّلات `BdApi` والنسخة الجاهزة [`ArabicDiscord.plugin.js`](./betterdiscord/ArabicDiscord.plugin.js) |
 | [`scripts/`](./scripts) | أدوات البناء والتحقق واختبارات التشغيل ومراقبة تحديثات Discord |
-| [`Install-ArabicDiscord.bat`](./Install-ArabicDiscord.bat) | أداة تثبيت وتحديث تفاعلية لنظامي Vencord وBetterDiscord |
+| [`install.ps1`](./install.ps1) | مثبّت PowerShell المباشر (`irm \| iex`) لنظامي Vencord وBetterDiscord |
+| [`Install-ArabicDiscord.bat`](./Install-ArabicDiscord.bat) | اختصار تشغيل تفاعلي للنسخة المباشرة على Windows |
 
 ---
 

@@ -71,5 +71,6 @@ jobs:
                   name: "ArabicDiscord ${{ steps.meta.outputs.tag }}"
                   generate_release_notes: true
                   files: |
+                      arabicDiscord/install.ps1
                       arabicDiscord/Install-ArabicDiscord.bat
                       arabicDiscord/betterdiscord/ArabicDiscord.plugin.js
